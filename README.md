@@ -11,11 +11,11 @@ Validate and impute your dataset with mathematical expressions.
 - [Installation](#installation)
 - [License](#license)
 
-## Installation
+<!-- ## Installation
 
 ```console
 pip install symconstraints
-```
+``` -->
 
 ## License
 
