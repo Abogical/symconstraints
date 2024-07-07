@@ -4,3 +4,4 @@
 from symconstraints.constraints import Constraints
 
 __all__ = ["Constraints"]
+__version__ = "0.0.1"

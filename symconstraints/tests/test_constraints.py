@@ -18,7 +18,9 @@ def equal_bools(bool1: Boolean, bool2: Boolean, domain=S.Reals):
         return bool1 == bool2
 
     pivot_symb = random.choice(list(symb1))
-    return solveset(bool1, pivot_symb, domain=domain) == solveset(bool2, pivot_symb, domain=domain)
+    return solveset(bool1, pivot_symb, domain=domain) == solveset(
+        bool2, pivot_symb, domain=domain
+    )
 
 
 def check_validations(validations, correct_constraints):
@@ -38,16 +40,21 @@ def check_validations(validations, correct_constraints):
         equal_validation = None
         for validation2 in unequal_validations2:
             if validation1.columns == validation2.columns and all(
-                any(equal_bools(constraint1, constraint2) for constraint2 in validation2.operations)
+                any(
+                    equal_bools(constraint1, constraint2)
+                    for constraint2 in validation2.operations
+                )
                 for constraint1 in validation1.operations
             ):
                 equal_validation = validation2
                 unequal_validations2.remove(validation2)
                 break
 
-        assert unequal_validations2 == set(), "Extra validations detected"
+        assert (
+            equal_validation is not None
+        ), f"No equivalent to {validation1} in {validations}"
 
-        assert equal_validation is not None, f"No equivalent to {validation1} in {validations}"
+    assert unequal_validations2 == set(), "Extra validations detected"
 
 
 def test_inferred_equal_validations():
@@ -55,7 +62,10 @@ def test_inferred_equal_validations():
 
     constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
 
-    check_validations(constraints.get_validation_operations(), [Eq(a, b + c), Eq(c, d - e), Eq(a, b + d - e)])
+    check_validations(
+        constraints.get_validation_operations(),
+        [Eq(a, b + c), Eq(c, d - e), Eq(a, b + d - e)],
+    )
 
 
 def test_inferred_inequality_validations():
@@ -63,11 +73,17 @@ def test_inferred_inequality_validations():
 
     constraints = Constraints([Eq(a, b + c), Le(c, d - e)])
 
-    check_validations(constraints.get_validation_operations(), [Eq(a, b + c), Le(c, d - e), Le(a, b + d - e)])
+    check_validations(
+        constraints.get_validation_operations(),
+        [Eq(a, b + c), Le(c, d - e), Le(a, b + d - e)],
+    )
 
     constraints = Constraints([Le(a, b + c), Le(c, d - e)])
 
-    check_validations(constraints.get_validation_operations(), [Le(a, b + c), Le(c, d - e), Le(a, b + d - e)])
+    check_validations(
+        constraints.get_validation_operations(),
+        [Le(a, b + c), Le(c, d - e), Le(a, b + d - e)],
+    )
 
 
 def test_inferred_inequality_strictness_validations():
@@ -75,4 +91,7 @@ def test_inferred_inequality_strictness_validations():
 
     constraints = Constraints([Eq(a, b + c), Lt(c, d - e)])
 
-    check_validations(constraints.get_validation_operations(), [Eq(a, b + c), Lt(c, d - e), Lt(a, b + d - e)])
+    check_validations(
+        constraints.get_validation_operations(),
+        [Eq(a, b + c), Lt(c, d - e), Lt(a, b + d - e)],
+    )

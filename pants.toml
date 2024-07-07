@@ -1,0 +1,22 @@
+[GLOBAL]
+pants_version = "2.21.0"
+backend_packages = [
+  "pants.backend.python",
+  "pants.backend.build_files.fmt.ruff",
+  "pants.backend.python.typecheck.mypy",
+  "pants.backend.experimental.python.lint.ruff.check",
+  "pants.backend.experimental.python.lint.ruff.format"
+]
+
+[python]
+enable_resolves = true
+interpreter_constraints = ['>=3.10']
+
+[setup-py-generation]
+generate_setup_default = false
+
+[source]
+marker_filenames = ["pyproject.toml"]
+
+[python-infer]
+unowned_dependency_behavior = "error"
