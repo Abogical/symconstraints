@@ -4,12 +4,11 @@ from collections import defaultdict
 from itertools import combinations
 from typing import TYPE_CHECKING
 
-import sympy
 from sympy import (
     And,
     Dummy,
     Eq,
-    Expr,
+    Basic,
     Ge,
     Gt,
     Interval,
@@ -24,11 +23,13 @@ from sympy import (
 )
 
 if TYPE_CHECKING:
-    from typing import Iterable, Literal, Mapping
+    from typing import Iterable, Literal
 
     from sympy.logic.boolalg import Boolean
 
 from symconstraints.operation import Imputation, Validation
+
+AllRelations = Eq | Le | Ge | Lt | Gt
 
 _assumption_domain = {
     "real": S.Reals,
@@ -54,10 +55,10 @@ def _get_symbol_domain(symbol):
 
 class _DummyRelation:
     rel: Literal["<", ">", "="]
-    expr: Expr
+    expr: Basic
     strict: bool
 
-    def __init__(self, relation: sympy.core.relational.Relational, dummy: Dummy):
+    def __init__(self, relation: AllRelations, dummy: Dummy):
         self.strict = isinstance(relation, (Lt, Gt))
         if isinstance(relation, Eq):
             self.rel = "="
@@ -70,10 +71,15 @@ class _DummyRelation:
             self.expr = relation.gts
 
 
-def _and_dummy_to_constraints(and_relation: And, dummy: Dummy):
+def _and_dummy_to_constraints(and_relation: And, dummy: Dummy) -> set[Boolean]:
     constraints: set[Boolean] = set()
     for relation1, relation2 in combinations(
-        (_DummyRelation(rel, dummy) for rel in and_relation.args), 2
+        (
+            _DummyRelation(rel, dummy)
+            for rel in and_relation.args
+            if isinstance(rel, AllRelations)
+        ),
+        2,
     ):
         match (relation1.rel, relation2.rel):
             case ("=", "="):
@@ -94,19 +100,24 @@ def _and_dummy_to_constraints(and_relation: And, dummy: Dummy):
     return constraints
 
 
+def _get_basic_symbols(basic: Basic):
+    return frozenset(
+        symbol for symbol in basic.free_symbols if isinstance(symbol, Symbol)
+    )
+
+
 class Constraints:
     _validations: list[Validation]
     _imputations: list[Imputation]
 
     def __init__(self, constraints: Iterable[Boolean]):
-        symbol_to_sets: Mapping[Symbol, sympy.Set] = defaultdict(set)
-        symbols_to_constraints: Mapping[frozenset[Symbol], Constraints] = defaultdict(
-            set
-        )
+        symbol_to_sets: defaultdict[Symbol, set] = defaultdict(set)
+        symbols_to_constraints: defaultdict[frozenset[Symbol], set] = defaultdict(set)
 
         for constraint in constraints:
-            symbols_to_constraints[frozenset(constraint.free_symbols)].add(constraint)
-            for symbol in constraint.free_symbols:
+            symbols = _get_basic_symbols(constraint)
+            symbols_to_constraints[symbols].add(constraint)
+            for symbol in symbols:
                 symbol_to_sets[symbol].add(
                     solveset(constraint, symbol, domain=_get_symbol_domain(symbol))
                 )
@@ -118,20 +129,23 @@ class Constraints:
                     set1.intersect(set2).as_relational(dummy), form="dnf"
                 )
                 if isinstance(dummy_relation, Or):
-                    if all(isinstance(arg, And) for arg in dummy_relation.args):
-                        and_operations = []
-                        for arg in dummy_relation.args:
+                    and_operations: list[Boolean] = []
+                    for arg in dummy_relation.args:
+                        if isinstance(arg, And):
                             and_operations += list(
                                 _and_dummy_to_constraints(arg, dummy)
                             )
-
-                    constraint = Or(*and_operations)
-                    symbols_to_constraints[frozenset(constraint.free_symbols)].add(
-                        constraint
-                    )
+                        else:
+                            and_operations = []
+                            break
+                    if len(and_operations) > 0:
+                        constraint = Or(*and_operations)
+                        symbols_to_constraints[_get_basic_symbols(constraint)].add(
+                            constraint
+                        )
                 elif isinstance(dummy_relation, And):
                     for constraint in _and_dummy_to_constraints(dummy_relation, dummy):
-                        symbols_to_constraints[frozenset(constraint.free_symbols)].add(
+                        symbols_to_constraints[_get_basic_symbols(constraint)].add(
                             constraint
                         )
 
