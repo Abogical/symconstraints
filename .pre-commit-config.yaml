@@ -3,8 +3,24 @@ repos:
     rev: v3.27.0
     hooks:
       - id: commitizen
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.1
+  - repo: local
     hooks:
-      - id: ruff
+      - id: pants-lint
+        name: Lint using Ruff in Pants
+        entry: 'pants lint ::'
+        language: system
+      - id: pants-test
+        name: Test using Pytest in Pants
+        entry: 'pants test ::'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+      - id: pants-check
+        name: Type check using Pyright in Pants
+        entry: 'pants check ::'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+    
+        
       
