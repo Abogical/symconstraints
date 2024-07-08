@@ -20,3 +20,6 @@ marker_filenames = ["pyproject.toml"]
 
 [python-infer]
 unowned_dependency_behavior = "error"
+
+[export]
+resolve = 'python-default'
