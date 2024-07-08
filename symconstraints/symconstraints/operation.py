@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sympy.logic.boolalg import Boolean
+    from sympy import Expr
 
 
 @dataclass(eq=True, frozen=True)
@@ -20,4 +21,4 @@ class Validation(Operation):
 @dataclass(eq=True, frozen=True)
 class Imputation(Operation):
     target_column: str
-    operations: frozenset
+    operation: Expr

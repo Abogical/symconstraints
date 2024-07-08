@@ -5,7 +5,7 @@ from sympy import Eq, Le, Lt, S, solveset, symbols
 from sympy.logic.boolalg import Boolean
 
 from symconstraints import Constraints
-from symconstraints.operation import Validation
+from symconstraints.operation import Validation, Imputation
 
 
 def equal_bools(bool1: Boolean, bool2: Boolean, domain=S.Reals):
@@ -94,4 +94,25 @@ def test_inferred_inequality_strictness_validations():
     check_validations(
         constraints.get_validation_operations(),
         [Eq(a, b + c), Lt(c, d - e), Lt(a, b + d - e)],
+    )
+
+
+def test_inferred_equal_imputations():
+    a, b, c, d, e = symbols("a b c d e")
+
+    constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
+
+    assert frozenset(constraints.get_imputation_operations()) == frozenset(
+        [
+            Imputation(frozenset(["b", "c"]), "a", b + c),
+            Imputation(frozenset(["a", "c"]), "b", a - c),
+            Imputation(frozenset(["a", "b"]), "c", a - b),
+            Imputation(frozenset(["d", "e"]), "c", d - e),
+            Imputation(frozenset(["c", "e"]), "d", c + e),
+            Imputation(frozenset(["c", "d"]), "e", d - c),
+            Imputation(frozenset(["b", "d", "e"]), "a", b + d - e),
+            Imputation(frozenset(["a", "d", "e"]), "b", a - d + e),
+            Imputation(frozenset(["a", "b", "e"]), "d", a - b + e),
+            Imputation(frozenset(["a", "b", "d"]), "e", d - a + b),
+        ]
     )

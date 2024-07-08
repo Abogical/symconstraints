@@ -4,6 +4,7 @@ from collections import defaultdict
 from itertools import combinations
 from typing import TYPE_CHECKING
 
+import sympy
 from sympy import (
     And,
     Dummy,
@@ -20,6 +21,8 @@ from sympy import (
     oo,
     simplify_logic,
     solveset,
+    FiniteSet,
+    Expr,
 )
 
 if TYPE_CHECKING:
@@ -113,14 +116,18 @@ class Constraints:
     def __init__(self, constraints: Iterable[Boolean]):
         symbol_to_sets: defaultdict[Symbol, set] = defaultdict(set)
         symbols_to_constraints: defaultdict[frozenset[Symbol], set] = defaultdict(set)
+        self._imputations = []
 
         for constraint in constraints:
             symbols = _get_basic_symbols(constraint)
             symbols_to_constraints[symbols].add(constraint)
             for symbol in symbols:
-                symbol_to_sets[symbol].add(
-                    solveset(constraint, symbol, domain=_get_symbol_domain(symbol))
+                symbol_set = solveset(
+                    constraint, symbol, domain=_get_symbol_domain(symbol)
                 )
+                symbol_to_sets[symbol].add(symbol_set)
+
+                self._add_possible_imputation_from_set(symbol_set, symbol)
 
         for symbol, symbol_sets in symbol_to_sets.items():
             for set1, set2 in combinations(symbol_sets, 2):
@@ -145,14 +152,34 @@ class Constraints:
                         )
                 elif isinstance(dummy_relation, And):
                     for constraint in _and_dummy_to_constraints(dummy_relation, dummy):
-                        symbols_to_constraints[_get_basic_symbols(constraint)].add(
-                            constraint
-                        )
+                        constraint_symbols = _get_basic_symbols(constraint)
+                        symbols_to_constraints[constraint_symbols].add(constraint)
+                        for constraint_symbol in constraint_symbols:
+                            constraint_symbol_set = solveset(
+                                constraint, constraint_symbol
+                            )
+                            self._add_possible_imputation_from_set(
+                                constraint_symbol_set, constraint_symbol
+                            )
 
         self._validations = [
             Validation(frozenset(str(sym) for sym in symbols), frozenset(constraints))
             for symbols, constraints in symbols_to_constraints.items()
         ]
+
+    def _add_possible_imputation_from_set(
+        self, set_expr: sympy.Set, target_expr: Symbol
+    ):
+        if isinstance(set_expr, FiniteSet) and len(set_expr) == 1:
+            expr = set_expr.args[0]
+            if isinstance(expr, Expr):
+                self._imputations.append(
+                    Imputation(
+                        frozenset(str(sym) for sym in _get_basic_symbols(expr)),
+                        str(target_expr),
+                        expr,
+                    )
+                )
 
     def get_validation_operations(self) -> list[Validation]:
         return self._validations
