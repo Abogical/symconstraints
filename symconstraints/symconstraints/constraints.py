@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from itertools import combinations
 from typing import TYPE_CHECKING
+from warnings import warn
 
 import sympy
 from sympy import (
@@ -32,8 +33,6 @@ if TYPE_CHECKING:
 
 from symconstraints.operation import Imputation, Validation
 
-AllRelations = Eq | Le | Ge | Lt | Gt
-
 _assumption_domain = {
     "real": S.Reals,
     "complex": S.Complexes,
@@ -61,29 +60,39 @@ class _DummyRelation:
     expr: Basic
     strict: bool
 
-    def __init__(self, relation: AllRelations, dummy: Dummy):
-        self.strict = isinstance(relation, (Lt, Gt))
-        if isinstance(relation, Eq):
+    def __init__(self, relation: Basic, dummy: Dummy):
+        dummy_set = solveset(relation, dummy, domain=_get_symbol_domain(dummy))
+
+        if isinstance(dummy_set, FiniteSet) and len(dummy_set) == 1:
             self.rel = "="
-            self.expr = relation.rhs if relation.lhs == dummy else relation.lhs
-        elif relation.gts == dummy:
-            self.rel = ">"
-            self.expr = relation.lts
-        else:
-            self.rel = "<"
-            self.expr = relation.gts
+            self.expr = dummy_set.args[0]
+            self.strict = False
+            return
+        elif isinstance(dummy_set, Interval):
+            if isinstance(dummy_set.end, Expr) and dummy_set.end.is_constant():
+                self.rel = ">"
+                self.expr = dummy_set.start
+                self.strict = bool(dummy_set.left_open)
+                return
+            elif isinstance(dummy_set.start, Expr) and dummy_set.start.is_constant():
+                self.rel = "<"
+                self.expr = dummy_set.end
+                self.strict = bool(dummy_set.right_open)
+                return
+
+        raise ValueError(f"Could not analyze relation {relation}")
 
 
 def _and_dummy_to_constraints(and_relation: And, dummy: Dummy) -> set[Boolean]:
     constraints: set[Boolean] = set()
-    for relation1, relation2 in combinations(
-        (
-            _DummyRelation(rel, dummy)
-            for rel in and_relation.args
-            if isinstance(rel, AllRelations)
-        ),
-        2,
-    ):
+    useful_relations = []
+    for rel in and_relation.args:
+        try:
+            useful_relations.append(_DummyRelation(rel, dummy))
+        except ValueError as e:
+            warn(str(e))
+
+    for relation1, relation2 in combinations(useful_relations, 2):
         match (relation1.rel, relation2.rel):
             case ("=", "="):
                 constraints.add(Eq(relation1.expr, relation2.expr))

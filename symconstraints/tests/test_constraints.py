@@ -60,6 +60,13 @@ def check_validations(validations, correct_constraints):
 def test_inferred_equal_validations():
     a, b, c, d, e = symbols("a b c d e")
 
+    constraints = Constraints([Eq(a, 2 * b), Eq(c, b + 3)])
+
+    check_validations(
+        constraints.get_validation_operations(),
+        [Eq(a, 2 * b), Eq(c, b + 3), Eq(c, a / 2 + 3)],
+    )
+
     constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
 
     check_validations(
