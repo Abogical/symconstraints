@@ -1,0 +1,46 @@
+name: Test
+on: [push, pull_request]
+jobs:
+  all-python-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+    - uses: actions/checkout@main
+    - uses: actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Initialize Pants
+      uses: pantsbuild/actions/init-pants@main
+      with:
+        gha-cache-key: v0-py${{ matrix.python_version }}
+        named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock') }}
+    - name: Check BUILD files
+      run: |
+        pants tailor --check update-build-files --check ::
+    - name: Typecheck and test
+      run: |
+        pants check test ::
+  latest-python-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    steps:
+    - uses: actions/checkout@main
+    - uses: actions/setup-python@main
+      with:
+        python-version: '3.12'
+    - name: Initialize Pants
+      uses: pantsbuild/actions/init-pants@main
+      with:
+        gha-cache-key: v0-py3.12
+        named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock') }}
+    - name: Check BUILD files
+      run: |
+        pants tailor --check update-build-files --check ::
+    - name: Lint and attempt packaging
+      run: |
+        pants lint package ::
+
+
