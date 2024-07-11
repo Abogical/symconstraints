@@ -1,27 +1,25 @@
+---
 default_install_hook_types: [pre-commit, pre-push]
 repos:
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.27.0
-    hooks:
-      - id: commitizen
-  - repo: local
-    hooks:
-      - id: pants-lint
-        name: Lint using Ruff in Pants
-        entry: 'pants lint ::'
-        language: system
-      - id: pants-test
-        name: Test using Pytest in Pants
-        entry: 'pants test ::'
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-      - id: pants-check
-        name: Type check using Pyright in Pants
-        entry: 'pants check ::'
-        language: system
-        stages: [pre-push]
-        pass_filenames: false
-    
-        
-      
+- repo: https://github.com/commitizen-tools/commitizen
+  rev: v3.27.0
+  hooks:
+  - id: commitizen
+- repo: local
+  hooks:
+  - id: pants-lint
+    name: Lint using Ruff in Pants
+    entry: 'pants lint ::'
+    language: system
+  - id: pants-test
+    name: Test using Pytest in Pants
+    entry: 'pants test ::'
+    language: system
+    stages: [pre-push]
+    pass_filenames: false
+  - id: pants-check
+    name: Type check using Pyright in Pants
+    entry: 'pants check ::'
+    language: system
+    stages: [pre-push]
+    pass_filenames: false
