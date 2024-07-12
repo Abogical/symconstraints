@@ -13,6 +13,7 @@ def check_validation_str(cols, ops):
         cols
     )
     assert match.group(2) == ", ".join(str(op) for op in frozenset(ops))
+    assert str(validation) == repr(validation)
 
 
 def test_validation_str():
@@ -34,6 +35,7 @@ def check_imputation_str(cols, target, expr):
     )
     assert match.group(2) == str(target)
     assert match.group(3) == str(expr)
+    assert str(imputation) == repr(imputation)
 
 
 def test_imputation_str():

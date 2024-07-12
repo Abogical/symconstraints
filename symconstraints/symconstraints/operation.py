@@ -20,6 +20,9 @@ class Validation(Operation):
     def __str__(self):
         return f'Validation: ({", ".join(self.columns)}) => [{", ".join(str(op) for op in self.operations)}]'
 
+    def __repr__(self):
+        return str(self)
+
 
 @dataclass(eq=True, frozen=True)
 class Imputation(Operation):
@@ -28,3 +31,6 @@ class Imputation(Operation):
 
     def __str__(self):
         return f'Imputation: ({", ".join(self.columns)}) => {self.target_column} = {self.operation}'
+
+    def __repr__(self):
+        return str(self)
