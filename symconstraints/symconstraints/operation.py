@@ -17,8 +17,14 @@ class Operation:
 class Validation(Operation):
     operations: frozenset[Boolean]
 
+    def __str__(self):
+        return f'Validation: ({", ".join(self.columns)}) => [{", ".join(str(op) for op in self.operations)}]'
+
 
 @dataclass(eq=True, frozen=True)
 class Imputation(Operation):
     target_column: str
     operation: Expr
+
+    def __str__(self):
+        return f'Imputation: ({", ".join(self.columns)}) => {self.target_column} = {self.operation}'
