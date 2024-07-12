@@ -190,8 +190,8 @@ class Constraints:
                     )
                 )
 
-    def get_validation_operations(self) -> list[Validation]:
+    def get_validations(self) -> list[Validation]:
         return self._validations
 
-    def get_imputation_operations(self) -> list[Imputation]:
+    def get_imputations(self) -> list[Imputation]:
         return self._imputations
