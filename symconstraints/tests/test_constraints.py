@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 
-from sympy import Eq, Le, Lt, S, solveset, symbols
+from sympy import Eq, Le, Lt, S, solveset, symbols, sqrt
 from sympy.logic.boolalg import Boolean
 
 from symconstraints import Constraints
@@ -122,4 +122,21 @@ def test_inferred_equal_imputations():
             Imputation(frozenset(["a", "b", "e"]), "d", a - b + e),
             Imputation(frozenset(["a", "b", "d"]), "e", d - a + b),
         ]
+    )
+
+
+def test_inferred_square_equality_validations():
+    a, b, c, d = symbols("a b c d", real=True)
+
+    constraints = Constraints([Eq(a, 2 * b + d), Eq(c, b**2 + a**2)])
+
+    check_validations(
+        constraints.get_validations(),
+        [
+            Eq(a, 2 * b + d),
+            Eq(c, b**2 + a**2),
+            Eq(a / 2 - d / 2, sqrt(-(a**2) + c))
+            | Eq(a / 2 - d / 2, -sqrt(-(a**2) + c)),
+            Eq(2 * b + d, sqrt(-(b**2) + c)) | Eq(2 * b + d, -sqrt(-(b**2) + c)),
+        ],
     )

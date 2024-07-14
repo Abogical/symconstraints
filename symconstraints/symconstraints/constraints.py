@@ -24,6 +24,8 @@ from sympy import (
     solveset,
     FiniteSet,
     Expr,
+    Intersection,
+    Union,
 )
 
 if TYPE_CHECKING:
@@ -63,6 +65,12 @@ class _DummyRelation:
     def __init__(self, relation: Basic, dummy: Dummy):
         dummy_set = solveset(relation, dummy, domain=_get_symbol_domain(dummy))
 
+        # simplify set if possible
+        while (
+            isinstance(dummy_set, (Intersection, Union)) and len(dummy_set.args[1]) == 1
+        ):
+            dummy_set = dummy_set.args[1]
+
         if isinstance(dummy_set, FiniteSet) and len(dummy_set) == 1:
             self.rel = "="
             self.expr = dummy_set.args[0]
@@ -80,7 +88,9 @@ class _DummyRelation:
                 self.strict = bool(dummy_set.right_open)
                 return
 
-        raise ValueError(f"Could not analyze relation {relation}")
+        raise ValueError(
+            f"Could not analyze relation {relation} as it generated the set {dummy_set}"
+        )
 
 
 def _and_dummy_to_constraints(and_relation: And, dummy: Dummy) -> set[Boolean]:
@@ -165,7 +175,9 @@ class Constraints:
                         symbols_to_constraints[constraint_symbols].add(constraint)
                         for constraint_symbol in constraint_symbols:
                             constraint_symbol_set = solveset(
-                                constraint, constraint_symbol
+                                constraint,
+                                constraint_symbol,
+                                domain=_get_symbol_domain(constraint_symbol),
                             )
                             self._add_possible_imputation_from_set(
                                 constraint_symbol_set, constraint_symbol
