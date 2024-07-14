@@ -1,3 +1,5 @@
+"""Tools to create constraints."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -129,10 +131,41 @@ def _get_basic_symbols(basic: Basic):
 
 
 class Constraints:
+    """Creates a set of validation and imputation operations from mathematical SymPy expressions.
+
+    Examples
+    --------
+    Get all possible validations and imputations, including inferred ones
+
+    >>> from sympy import symbols, Eq
+    >>> from symconstraints import Constraints
+    >>> a, b, c = symbols('a b c', real=True)
+    >>> # a=b+c, c<b+3
+    >>> constraints = Constraints([Eq(a, 2 * b), c < b + 3)])
+    >>> for validation in constraints.get_validations():
+    ...     print(validation)
+    ...
+    Validation: (b, a) => [Eq(a, 2*b)]
+    Validation: (c, b) => [c < b + 3]
+    Validation: (c, a) => [a/2 > c - 3]
+    >>> for imputation in constraints.get_imputations():
+    ...     print(imputation)
+    ...
+    Imputation: (b) => a = 2*b
+    Imputation: (a) => b = a/2
+    """
+
     _validations: list[Validation]
     _imputations: list[Imputation]
 
     def __init__(self, constraints: Iterable[Boolean]):
+        """Create constraints.
+
+        Parameters
+        ----------
+        constraints : Iterable[Boolean]
+            List of SymPy Boolean expressions
+        """
         symbol_to_sets: defaultdict[Symbol, set] = defaultdict(set)
         symbols_to_constraints: defaultdict[frozenset[Symbol], set] = defaultdict(set)
         self._imputations = []
@@ -203,7 +236,21 @@ class Constraints:
                 )
 
     def get_validations(self) -> list[Validation]:
+        """Get all validation operations from the constraints.
+
+        Returns
+        -------
+        list[Validation]
+            Validation operations
+        """
         return self._validations
 
     def get_imputations(self) -> list[Imputation]:
+        """Get all imputation operations from the constraints.
+
+        Returns
+        -------
+        list[Imputation]
+            Imputation operations
+        """
         return self._imputations

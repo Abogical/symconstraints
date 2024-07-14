@@ -1,3 +1,5 @@
+"""Operations module."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,11 +12,27 @@ if TYPE_CHECKING:
 
 @dataclass(eq=True, frozen=True)
 class Operation:
+    """Generic operation.
+
+    Attributes
+    ----------
+    columns : frozenset[str]
+        Set of columns that this operation needs to check if its not missing before executing.
+    """
+
     columns: frozenset[str]
 
 
 @dataclass(eq=True, frozen=True)
 class Validation(Operation):
+    """Validation operation.
+
+    Attributes
+    ----------
+    operations : frozenset[Boolean]
+        A set of SymPy Boolean expressions that are used to validate the columns.
+    """
+
     operations: frozenset[Boolean]
 
     def __str__(self):
@@ -26,6 +44,17 @@ class Validation(Operation):
 
 @dataclass(eq=True, frozen=True)
 class Imputation(Operation):
+    """Imputation operation.
+
+    Attributes
+    ----------
+    target_column : str
+        Column that will be imputed by this operation
+
+    operation : Expr
+        SymPy expression used to impute the target column
+    """
+
     target_column: str
     operation: Expr
 

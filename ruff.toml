@@ -1,0 +1,8 @@
+extend-exclude = ["__about__.py", "tests"]
+
+[lint.pydocstyle]
+convention = "numpy"
+
+[lint]
+extend-select = ["D"]
+extend-ignore = ["D105"]
