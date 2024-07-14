@@ -39,7 +39,7 @@ def check_validations(validations, correct_constraints):
     for validation1 in unequal_validations1:
         equal_validation = None
         for validation2 in unequal_validations2:
-            if validation1.columns == validation2.columns and all(
+            if validation1.keys == validation2.keys and all(
                 any(
                     equal_bools(constraint1, constraint2)
                     for constraint2 in validation2.operations

@@ -16,11 +16,11 @@ class Operation:
 
     Attributes
     ----------
-    columns : frozenset[str]
-        Set of columns that this operation needs to check if its not missing before executing.
+    keys : frozenset[str]
+        Set of keys that this operation needs to check if its not missing before executing.
     """
 
-    columns: frozenset[str]
+    keys: frozenset[str]
 
 
 @dataclass(eq=True, frozen=True)
@@ -30,13 +30,13 @@ class Validation(Operation):
     Attributes
     ----------
     operations : frozenset[Boolean]
-        A set of SymPy Boolean expressions that are used to validate the columns.
+        A set of SymPy Boolean expressions that are used to validate the keys.
     """
 
     operations: frozenset[Boolean]
 
     def __str__(self):
-        return f'Validation: ({", ".join(self.columns)}) => [{", ".join(str(op) for op in self.operations)}]'
+        return f'Validation: ({", ".join(self.keys)}) => [{", ".join(str(op) for op in self.operations)}]'
 
     def __repr__(self):
         return str(self)
@@ -48,18 +48,18 @@ class Imputation(Operation):
 
     Attributes
     ----------
-    target_column : str
+    target_key : str
         Column that will be imputed by this operation
 
     operation : Expr
         SymPy expression used to impute the target column
     """
 
-    target_column: str
+    target_key: str
     operation: Expr
 
     def __str__(self):
-        return f'Imputation: ({", ".join(self.columns)}) => {self.target_column} = {self.operation}'
+        return f'Imputation: ({", ".join(self.keys)}) => {self.target_key} = {self.operation}'
 
     def __repr__(self):
         return str(self)
