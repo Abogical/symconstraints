@@ -27,3 +27,6 @@ resolve = 'python-default'
 
 [yamllint]
 config_file_name = '.yamllint.yaml'
+
+[test]
+use_coverage = true
