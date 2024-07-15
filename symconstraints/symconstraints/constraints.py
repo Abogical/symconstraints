@@ -130,6 +130,23 @@ def _get_basic_symbols(basic: Basic):
     )
 
 
+def symbols(symbols_str: str | Iterable[str], *, real=True, **kwargs):
+    """Define SymPy symbols.
+
+    This is equivalent to the sympy.symbols function, but symbols are defined in the real domain by default.
+
+    Parameters
+    ----------
+    symbols_str : str | Iterable[str]
+        Space seperated set of symbols or an array of symbols
+    real : bool, optional
+        Assume symbols are real numbers, by default True
+    **kwargs
+        Other keyword arguments are passed to the sympy.symbols functions
+    """
+    return sympy.symbols(symbols_str, real=real, **kwargs)
+
+
 class Constraints:
     """Creates a set of validation and imputation operations from mathematical SymPy expressions.
 
@@ -137,9 +154,9 @@ class Constraints:
     --------
     Get all possible validations and imputations, including inferred ones
 
-    >>> from sympy import symbols, Eq
-    >>> from symconstraints import Constraints
-    >>> a, b, c = symbols('a b c', real=True)
+    >>> from sympy import Eq
+    >>> from symconstraints import Constraints, symbols
+    >>> a, b, c = symbols('a b c')
     >>> # a=b+c, c<b+3
     >>> constraints = Constraints([Eq(a, 2 * b), c < b + 3)])
     >>> for validation in constraints.get_validations():

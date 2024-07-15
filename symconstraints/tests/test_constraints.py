@@ -1,10 +1,10 @@
 import random
 from collections import defaultdict
 
-from sympy import Eq, Le, Lt, S, solveset, symbols, sqrt
+from sympy import Eq, Le, Lt, S, solveset, sqrt
 from sympy.logic.boolalg import Boolean
 
-from symconstraints import Constraints
+from symconstraints import Constraints, symbols
 from symconstraints.operation import Validation, Imputation
 
 
@@ -76,7 +76,7 @@ def test_inferred_equal_validations():
 
 
 def test_inferred_inequality_validations():
-    a, b, c, d, e = symbols("a b c d e", real=True)
+    a, b, c, d, e = symbols("a b c d e")
 
     constraints = Constraints([Eq(a, b + c), Le(c, d - e)])
 
@@ -94,7 +94,7 @@ def test_inferred_inequality_validations():
 
 
 def test_inferred_inequality_strictness_validations():
-    a, b, c, d, e = symbols("a b c d e", real=True)
+    a, b, c, d, e = symbols("a b c d e")
 
     constraints = Constraints([Eq(a, b + c), Lt(c, d - e)])
 
