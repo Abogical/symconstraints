@@ -49,10 +49,10 @@ class Imputation(Operation):
     Attributes
     ----------
     target_key : str
-        Column that will be imputed by this operation
+        Key that will be imputed by this operation
 
     operation : Expr
-        SymPy expression used to impute the target column
+        SymPy expression used to impute the target key
     """
 
     target_key: str
