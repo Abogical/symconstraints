@@ -29,7 +29,7 @@ def check_validations(validations, correct_constraints):
         symbols_to_constraints[frozenset(constraint.free_symbols)].add(constraint)
 
     correct_validations = {
-        Validation(frozenset(str(sym) for sym in symbols), frozenset(constraints))
+        Validation(frozenset(symbols), frozenset(constraints))
         for symbols, constraints in symbols_to_constraints.items()
     }
 
@@ -111,16 +111,16 @@ def test_inferred_equal_imputations():
 
     assert frozenset(constraints.get_imputations()) == frozenset(
         [
-            Imputation(frozenset(["b", "c"]), "a", b + c),
-            Imputation(frozenset(["a", "c"]), "b", a - c),
-            Imputation(frozenset(["a", "b"]), "c", a - b),
-            Imputation(frozenset(["d", "e"]), "c", d - e),
-            Imputation(frozenset(["c", "e"]), "d", c + e),
-            Imputation(frozenset(["c", "d"]), "e", d - c),
-            Imputation(frozenset(["b", "d", "e"]), "a", b + d - e),
-            Imputation(frozenset(["a", "d", "e"]), "b", a - d + e),
-            Imputation(frozenset(["a", "b", "e"]), "d", a - b + e),
-            Imputation(frozenset(["a", "b", "d"]), "e", d - a + b),
+            Imputation(frozenset([b, c]), a, b + c),
+            Imputation(frozenset([a, c]), b, a - c),
+            Imputation(frozenset([a, b]), c, a - b),
+            Imputation(frozenset([d, e]), c, d - e),
+            Imputation(frozenset([c, e]), d, c + e),
+            Imputation(frozenset([c, d]), e, d - c),
+            Imputation(frozenset([b, d, e]), a, b + d - e),
+            Imputation(frozenset([a, d, e]), b, a - d + e),
+            Imputation(frozenset([a, b, e]), d, a - b + e),
+            Imputation(frozenset([a, b, d]), e, d - a + b),
         ]
     )
 

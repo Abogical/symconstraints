@@ -31,7 +31,7 @@ def check_imputation_str(cols, target, expr):
     match = imputation_re.fullmatch(str(imputation))
     assert match is not None
     assert frozenset(var.strip() for var in match.group(1).split(",")) == frozenset(
-        cols
+        str(c) for c in cols
     )
     assert match.group(2) == str(target)
     assert match.group(3) == str(expr)
@@ -41,5 +41,5 @@ def check_imputation_str(cols, target, expr):
 def test_imputation_str():
     a, b, c = symbols("a b c")
 
-    check_imputation_str(["a", "b", "c"], a, b + c)
-    check_imputation_str(["a", "b", "c"], b, 2 * a - c)
+    check_imputation_str([a, b, c], a, b + c)
+    check_imputation_str([a, b, c], b, 2 * a - c)

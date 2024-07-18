@@ -234,7 +234,7 @@ class Constraints:
                             )
 
         self._validations = [
-            Validation(frozenset(str(sym) for sym in symbols), frozenset(constraints))
+            Validation(frozenset(symbols), frozenset(constraints))
             for symbols, constraints in symbols_to_constraints.items()
         ]
 
@@ -246,8 +246,8 @@ class Constraints:
             if isinstance(expr, Expr):
                 self._imputations.append(
                     Imputation(
-                        frozenset(str(sym) for sym in _get_basic_symbols(expr)),
-                        str(target_expr),
+                        _get_basic_symbols(expr),
+                        target_expr,
                         expr,
                     )
                 )
