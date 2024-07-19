@@ -15,3 +15,5 @@ pex_binary(
     script="pdoc",
     args=[*pdoc_args, "-o", "dist/docs"],
 )
+
+python_requirement(name="pytest-reqs", requirements=["pytest", "pytest-cov", "ipdb"])
