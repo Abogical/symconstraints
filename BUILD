@@ -1,6 +1,6 @@
 python_requirement(name="docs-reqs", requirements=["pdoc"])
 
-pdoc_args = ["symconstraints/symconstraints", "--math"]
+pdoc_args = ["symconstraints/symconstraints", "--math", "--docformat", "numpy"]
 
 pex_binary(
     name="docs-serve",
