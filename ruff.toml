@@ -1,8 +1,10 @@
-extend-exclude = ["__about__.py", "tests"]
-
 [lint.pydocstyle]
 convention = "numpy"
 
 [lint]
 extend-select = ["D"]
 extend-ignore = ["D105"]
+
+[lint.per-file-ignores]
+"__about__.py" = ["D"]
+"symconstraints/tests/**" = ["D"]

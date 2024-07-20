@@ -143,13 +143,16 @@ def test_inferred_square_equality_validations():
         ],
     )
 
+
 class OutputChecker(doctest.OutputChecker):
     def check_output(self, want, got, optionflags):
         # Don't care about exact order of output as it is not deterministic
         return len(want.splitlines()) == len(got.splitlines()) and len(want) == len(got)
 
+
 def test_docs():
-    assert unittest.TextTestRunner().run(doctest.DocTestSuite(
-        constraints,
-        checker=OutputChecker()
-    )).wasSuccessful()
+    assert (
+        unittest.TextTestRunner()
+        .run(doctest.DocTestSuite(constraints, checker=OutputChecker()))
+        .wasSuccessful()
+    )
