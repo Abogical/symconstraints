@@ -158,7 +158,7 @@ class Constraints:
     >>> from symconstraints import Constraints, symbols
     >>> a, b, c = symbols('a b c')
     >>> # a=b+c, c<b+3
-    >>> constraints = Constraints([Eq(a, 2 * b), c < b + 3)])
+    >>> constraints = Constraints([Eq(a, 2 * b), c < b + 3])
     >>> for validation in constraints.get_validations():
     ...     print(validation)
     ...

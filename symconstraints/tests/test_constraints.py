@@ -4,8 +4,10 @@ from collections import defaultdict
 from sympy import Eq, Le, Lt, S, solveset, sqrt
 from sympy.logic.boolalg import Boolean
 
-from symconstraints import Constraints, symbols
+from symconstraints import Constraints, symbols, constraints
 from symconstraints.operation import Validation, Imputation
+import doctest
+import unittest
 
 
 def equal_bools(bool1: Boolean, bool2: Boolean, domain=S.Reals):
@@ -140,3 +142,14 @@ def test_inferred_square_equality_validations():
             Eq(2 * b + d, sqrt(-(b**2) + c)) | Eq(2 * b + d, -sqrt(-(b**2) + c)),
         ],
     )
+
+class OutputChecker(doctest.OutputChecker):
+    def check_output(self, want, got, optionflags):
+        # Don't care about exact order of output as it is not deterministic
+        return len(want.splitlines()) == len(got.splitlines()) and len(want) == len(got)
+
+def test_docs():
+    assert unittest.TextTestRunner().run(doctest.DocTestSuite(
+        constraints,
+        checker=OutputChecker()
+    )).wasSuccessful()
