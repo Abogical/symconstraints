@@ -29,7 +29,7 @@ jobs:
         gha-cache-key: v0-py3.12
         named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock') }}
     - run: |
-        pants run :docs-build
+        pants run docs:build
 
     - uses: actions/upload-pages-artifact@v3
       with:

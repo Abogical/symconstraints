@@ -4,7 +4,7 @@
 """Validate and impute your dataset with mathematical expressions.
 
 Symbolic Constraints, or `symconstraints` for short, allows you to express your dataset rules
-using mathematical equations and expressions. It makes use of the powerful `SymPy <https://www.sympy.org>`_ Computer Algebra System to analyze
+using mathematical equations and expressions. It makes use of the powerful [SymPy](https://www.sympy.org) Computer Algebra System to analyze
 mathematical expressions and infer all possible validation and imputation methods to your datasets. Helping you clean
 your dataset with little code.
 
