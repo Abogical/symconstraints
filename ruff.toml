@@ -7,4 +7,4 @@ extend-ignore = ["D105"]
 
 [lint.per-file-ignores]
 "__about__.py" = ["D"]
-"symconstraints/tests/**" = ["D"]
+"tests/**" = ["D"]
