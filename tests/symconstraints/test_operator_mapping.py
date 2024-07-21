@@ -5,8 +5,11 @@ from symconstraints.operator_mapping import (
     ValidationError,
     ConstraintsValidationError,
 )
+from symconstraints import operator_mapping
 import re
 from ast import literal_eval
+import unittest
+import doctest
 
 
 def test_validate_dict():
@@ -64,3 +67,23 @@ def test_validate_constraint():
 def test_wrong_validation():
     with pytest.raises(ValueError, match="Invalid constraints given: 33"):
         validate_mapping(33, {"a": 1, "b": 7})  # type: ignore
+
+
+dict_re = re.compile(r"(\{[^}]*\})")
+
+
+class OutputChecker(doctest.OutputChecker):
+    def check_output(self, want, got, optionflags):
+        # Don't care about exact order of output as it is not deterministic
+        return dict_re.sub("", want) == dict_re.sub("", got) and all(
+            literal_eval(want_obj) == literal_eval(got_obj)
+            for want_obj, got_obj in zip(dict_re.findall(want), dict_re.findall(got))
+        )
+
+
+def test_docs():
+    assert (
+        unittest.TextTestRunner()
+        .run(doctest.DocTestSuite(operator_mapping, checker=OutputChecker()))
+        .wasSuccessful()
+    )

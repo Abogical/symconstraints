@@ -73,6 +73,21 @@ def validate_mapping(constraints: Constraints | Validation, mapping: AnyValueMap
         Raised when the mapping data given is invalid under constraints of type `Validation`
     ConstraintsValidationError
         Raised when the mapping data given is invalid under constraints of type `Constraints`
+
+    Examples
+    --------
+    >>> from symconstraints import Constraints, symbols
+    >>> from symconstraints.operator_mapping import validate_mapping
+    >>> a, b, c = symbols('a b c')
+    >>> constraints = Constraints([a < b, b < c])
+    >>> validate_mapping(constraints, {'a': 1, 'b': 2})
+    >>> # Nothing happens, data is valid
+    >>> try:
+    ...   validate_mapping(constraints, {'a': 4, 'c': 1})
+    ... except ConstraintsValidationError as e:
+    ...   print(e)
+    Mapping is invalid due to:
+    - Mapping {'a': 4, 'c': 1} is invalid due to not satisfying [a < c]
     """
     if isinstance(constraints, Validation):
         values = dict((str(k), mapping.get(str(k))) for k in constraints.keys)
