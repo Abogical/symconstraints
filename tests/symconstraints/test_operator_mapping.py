@@ -1,6 +1,10 @@
 import pytest
 from symconstraints import Validation, symbols, Constraints
-from symconstraints.operator_mapping import validate_mapping
+from symconstraints.operator_mapping import (
+    validate_mapping,
+    ValidationError,
+    ConstraintsValidationError,
+)
 import re
 from ast import literal_eval
 
@@ -10,26 +14,24 @@ def test_validate_dict():
     validation_op = a < b
     validation = Validation(frozenset([a, b]), frozenset([validation_op]))
 
-    valid_result = validate_mapping(validation, {"a": 5, "b": 8})
-    assert valid_result
-    assert str(valid_result) == "Mapping is valid"
+    validate_mapping(validation, {"a": 5, "b": 8})
 
     invalid_input = {"a": 10, "b": 1}
-    invalid_result = validate_mapping(validation, invalid_input)
 
-    assert not invalid_result
+    with pytest.raises(ValidationError) as invalid_result:
+        validate_mapping(validation, invalid_input)
 
-    assert len(invalid_result.unsatisfied_booleans) == 1
-    assert invalid_result.unsatisfied_booleans[0] == validation_op
-    assert invalid_result.values == invalid_input
+    assert len(invalid_result.value.unsatisfied_booleans) == 1
+    assert invalid_result.value.unsatisfied_booleans[0] == validation_op
+    assert invalid_result.value.values == invalid_input
 
-    validation_result_match = re.fullmatch(
+    invalid_result_match = re.fullmatch(
         r"Mapping (\{[^}]*\}) is invalid due to not satisfying "
         + re.escape(f"[{validation_op}]"),
-        str(invalid_result),
+        str(invalid_result.value),
     )
-    assert validation_result_match is not None
-    assert literal_eval(validation_result_match.group(1)) == invalid_input
+    assert invalid_result_match is not None
+    assert literal_eval(invalid_result_match.group(1)) == invalid_input
 
 
 def test_validate_constraint():
@@ -40,24 +42,21 @@ def test_validate_constraint():
 
     valid_input = {"a": 1, "b": 2, "c": 3}
 
-    valid_result = validate_mapping(constraints, valid_input)
-    assert valid_result
-    assert str(valid_result) == "Mapping is valid"
+    validate_mapping(constraints, valid_input)
 
     invalid_input = {"a": 1, "c": 0}
 
-    invalid_result = validate_mapping(constraints, invalid_input)
-    assert not invalid_result
+    with pytest.raises(ConstraintsValidationError) as invalid_result:
+        validate_mapping(constraints, invalid_input)
+
     unsatisfied_validations = [
-        validation_result
-        for validation_result in invalid_result.validation_results
-        if len(validation_result.unsatisfied_booleans) > 0
+        validation_error for validation_error in invalid_result.value.validation_errors
     ]
     assert len(unsatisfied_validations) == 1
     assert unsatisfied_validations[0].unsatisfied_booleans == [a < c]
 
     assert (
-        str(invalid_result)
+        str(invalid_result.value)
         == f"Mapping is invalid due to:\n- {unsatisfied_validations[0]}"
     )
 

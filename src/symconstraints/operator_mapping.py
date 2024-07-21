@@ -5,14 +5,14 @@ from symconstraints import Validation, Constraints
 from dataclasses import dataclass
 
 from collections.abc import Mapping
-from typing import TypeVar, overload
+from typing import TypeVar
 
 AnyValueMap = Mapping[str, TypeVar("V")]
 
 
 @dataclass(frozen=True)
-class ValidationResult:
-    """Validation result.
+class ValidationError(Exception):
+    """Validation error.
 
     Attributes
     ----------
@@ -27,53 +27,28 @@ class ValidationResult:
     unsatisfied_booleans: list[Boolean]
 
     def __str__(self):
-        return (
-            "Mapping is valid"
-            if len(self.unsatisfied_booleans) == 0
-            else f"Mapping {self.values} is invalid due to not satisfying [{', '.join(str(op) for op in self.unsatisfied_booleans)}]"
-        )
-
-    def __bool__(self):
-        return len(self.unsatisfied_booleans) == 0
+        return f"Mapping {self.values} is invalid due to not satisfying [{', '.join(str(op) for op in self.unsatisfied_booleans)}]"
 
 
 @dataclass(frozen=True)
-class ConstraintsValidationResult:
-    """Constraints validation result.
+class ConstraintsValidationError(Exception):
+    """Constraints validation error.
 
     Attributes
     ----------
-    validation_results : list[ValidationResult]
-        List of results for each validations in the constraints.
+    validation_errors : list[ValidationError]
+        List of errors for each validations in the constraints.
     """
 
-    validation_results: list[ValidationResult]
-
-    def __bool__(self):
-        return all(self.validation_results)
+    validation_errors: list[ValidationError]
 
     def __str__(self):
-        return (
-            "Mapping is valid"
-            if bool(self)
-            else "Mapping is invalid due to:"
-            + "".join(
-                f"\n- {validation_result}"
-                for validation_result in self.validation_results
-                if not validation_result
-            )
+        return "Mapping is invalid due to:" + "".join(
+            f"\n- {validation_error}" for validation_error in self.validation_errors
         )
 
 
-@overload
-def validate_mapping(
-    constraints: Validation, input_dict: AnyValueMap
-) -> ValidationResult: ...
-@overload
-def validate_mapping(
-    constraints: Constraints, input_dict: AnyValueMap
-) -> ConstraintsValidationResult: ...
-def validate_mapping(constraints, input_dict: AnyValueMap):
+def validate_mapping(constraints: Constraints | Validation, input_dict: AnyValueMap):
     """Validate mapping via a validation or constraints.
 
     Parameters
@@ -83,39 +58,43 @@ def validate_mapping(constraints, input_dict: AnyValueMap):
     input_dict : AnyValueMap
         Input to validate
 
-    Returns
-    -------
-    ConstraintsValidationResult | ValidationResult
-        Returns a `ConstraintsValidationResult` when `symconstraints.Constraints` is given, or returns a
-        `ValidationResult` when `symconstraints.Validation` is given as constraints.
-
     Raises
     ------
     ValueError
         Raised when an invalid constraints object is given.
+    ValidationError
+        Raised when the data given is invalid under constraints of type `Validation`
+    ConstraintsValidationError
+        Raised when the data given is invalid under constraints of type `Constraints`
     """
     if isinstance(constraints, Validation):
         values = dict((str(k), input_dict.get(str(k))) for k in constraints.keys)
 
         if any(input_dict.get(str(key)) is None for key in constraints.keys):
-            return ValidationResult(values, [])
+            return
 
         values_subs = [(k, input_dict[str(k)]) for k in constraints.keys]
 
-        return ValidationResult(
-            values,
-            [
-                operation
-                for operation in constraints.operations
-                if not operation.subs(values_subs)
-            ],
-        )
+        unsatisfied_expressions: list[Boolean] = [
+            operation
+            for operation in constraints.operations
+            if not operation.subs(values_subs)
+        ]
+
+        if len(unsatisfied_expressions) > 0:
+            raise ValidationError(
+                values,
+                unsatisfied_expressions,
+            )
     elif isinstance(constraints, Constraints):
-        return ConstraintsValidationResult(
-            [
+        errors: list[ValidationError] = []
+        for validation in constraints.get_validations():
+            try:
                 validate_mapping(validation, input_dict)
-                for validation in constraints.get_validations()
-            ]
-        )
+            except ValidationError as e:
+                errors.append(e)
+
+        if len(errors) > 0:
+            raise ConstraintsValidationError(errors)
     else:
         raise ValueError(f"Invalid constraints given: {constraints}")
