@@ -15,15 +15,7 @@ TODO
 
 from symconstraints.constraints import Constraints, symbols
 from symconstraints.operation import Operation, Validation, Imputation
-from symconstraints import operator_mapping
 
 __docformat__ = "numpy"
-__all__ = [
-    "Constraints",
-    "symbols",
-    "Operation",
-    "Validation",
-    "Imputation",
-    "operator_mapping",
-]
+__all__ = ["Constraints", "symbols", "Operation", "Validation", "Imputation"]
 __version__ = "0.0.1"
