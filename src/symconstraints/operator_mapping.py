@@ -48,14 +48,14 @@ class ConstraintsValidationError(Exception):
         )
 
 
-def validate_mapping(constraints: Constraints | Validation, input_dict: AnyValueMap):
+def validate_mapping(constraints: Constraints | Validation, mapping: AnyValueMap):
     """Validate mapping via a validation or constraints.
 
     Parameters
     ----------
     constraints : Constraints | Validation
         Constraints or validation to use for validation.
-    input_dict : AnyValueMap
+    mapping : AnyValueMap
         Input to validate
 
     Raises
@@ -63,17 +63,17 @@ def validate_mapping(constraints: Constraints | Validation, input_dict: AnyValue
     ValueError
         Raised when an invalid constraints object is given.
     ValidationError
-        Raised when the data given is invalid under constraints of type `Validation`
+        Raised when the mapping data given is invalid under constraints of type `Validation`
     ConstraintsValidationError
-        Raised when the data given is invalid under constraints of type `Constraints`
+        Raised when the mapping data given is invalid under constraints of type `Constraints`
     """
     if isinstance(constraints, Validation):
-        values = dict((str(k), input_dict.get(str(k))) for k in constraints.keys)
+        values = dict((str(k), mapping.get(str(k))) for k in constraints.keys)
 
-        if any(input_dict.get(str(key)) is None for key in constraints.keys):
+        if any(mapping.get(str(key)) is None for key in constraints.keys):
             return
 
-        values_subs = [(k, input_dict[str(k)]) for k in constraints.keys]
+        values_subs = [(k, mapping[str(k)]) for k in constraints.keys]
 
         unsatisfied_expressions: list[Boolean] = [
             operation
@@ -90,7 +90,7 @@ def validate_mapping(constraints: Constraints | Validation, input_dict: AnyValue
         errors: list[ValidationError] = []
         for validation in constraints.get_validations():
             try:
-                validate_mapping(validation, input_dict)
+                validate_mapping(validation, mapping)
             except ValidationError as e:
                 errors.append(e)
 
