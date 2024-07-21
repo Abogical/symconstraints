@@ -65,14 +65,14 @@ def test_inferred_equal_validations():
     constraints = Constraints([Eq(a, 2 * b), Eq(c, b + 3)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [Eq(a, 2 * b), Eq(c, b + 3), Eq(c, a / 2 + 3)],
     )
 
     constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [Eq(a, b + c), Eq(c, d - e), Eq(a, b + d - e)],
     )
 
@@ -83,14 +83,14 @@ def test_inferred_inequality_validations():
     constraints = Constraints([Eq(a, b + c), Le(c, d - e)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [Eq(a, b + c), Le(c, d - e), Le(a, b + d - e)],
     )
 
     constraints = Constraints([Le(a, b + c), Le(c, d - e)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [Le(a, b + c), Le(c, d - e), Le(a, b + d - e)],
     )
 
@@ -101,7 +101,7 @@ def test_inferred_inequality_strictness_validations():
     constraints = Constraints([Eq(a, b + c), Lt(c, d - e)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [Eq(a, b + c), Lt(c, d - e), Lt(a, b + d - e)],
     )
 
@@ -111,7 +111,7 @@ def test_inferred_equal_imputations():
 
     constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
 
-    assert frozenset(constraints.get_imputations()) == frozenset(
+    assert frozenset(constraints.imputations) == frozenset(
         [
             Imputation(frozenset([b, c]), a, b + c),
             Imputation(frozenset([a, c]), b, a - c),
@@ -133,7 +133,7 @@ def test_inferred_square_equality_validations():
     constraints = Constraints([Eq(a, 2 * b + d), Eq(c, b**2 + a**2)])
 
     check_validations(
-        constraints.get_validations(),
+        constraints.validations,
         [
             Eq(a, 2 * b + d),
             Eq(c, b**2 + a**2),

@@ -88,7 +88,7 @@ def validate_mapping(constraints: Constraints | Validation, mapping: AnyValueMap
             )
     elif isinstance(constraints, Constraints):
         errors: list[ValidationError] = []
-        for validation in constraints.get_validations():
+        for validation in constraints.validations:
             try:
                 validate_mapping(validation, mapping)
             except ValidationError as e:

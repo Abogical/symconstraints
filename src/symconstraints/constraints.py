@@ -159,13 +159,13 @@ class Constraints:
     >>> a, b, c = symbols('a b c')
     >>> # a=b+c, c<b+3
     >>> constraints = Constraints([Eq(a, 2 * b), c < b + 3])
-    >>> for validation in constraints.get_validations():
+    >>> for validation in constraints.validations:
     ...     print(validation)
     ...
     Validation: (b, a) => [Eq(a, 2*b)]
     Validation: (c, b) => [c < b + 3]
     Validation: (c, a) => [a/2 > c - 3]
-    >>> for imputation in constraints.get_imputations():
+    >>> for imputation in constraints.imputations:
     ...     print(imputation)
     ...
     Imputation: (b) => a = 2*b
@@ -252,7 +252,8 @@ class Constraints:
                     )
                 )
 
-    def get_validations(self) -> list[Validation]:
+    @property
+    def validations(self) -> list[Validation]:
         """Get all validation operations from the constraints.
 
         Returns
@@ -262,7 +263,8 @@ class Constraints:
         """
         return self._validations
 
-    def get_imputations(self) -> list[Imputation]:
+    @property
+    def imputations(self) -> list[Imputation]:
         """Get all imputation operations from the constraints.
 
         Returns
