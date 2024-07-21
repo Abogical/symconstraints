@@ -6,7 +6,7 @@ from symconstraints import Validation, Constraints
 from collections.abc import Mapping
 from typing import TypeVar
 
-AnyValueMap = Mapping[str, TypeVar("V")]
+StringMap = Mapping[str, TypeVar("V")]
 """Any generic map that has a string key, such as dict, defaultdict, Counter, etc."""
 
 
@@ -22,10 +22,10 @@ class ValidationError(Exception):
         List of equalities/inequalities where these values do not satisfy.
     """
 
-    values: AnyValueMap
+    values: StringMap
     unsatisfied_booleans: list[Boolean]
 
-    def __init__(self, values: AnyValueMap, unsatisfied_booleans: list[Boolean]):
+    def __init__(self, values: StringMap, unsatisfied_booleans: list[Boolean]):
         super().__init__(
             f"Mapping {values} is invalid due to not satisfying [{', '.join(str(op) for op in unsatisfied_booleans)}]"
         )
@@ -56,7 +56,7 @@ class ConstraintsValidationError(Exception):
         self.validation_errors = validation_errors
 
 
-def validate_mapping(constraints: Constraints | Validation, mapping: AnyValueMap):
+def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
     """Validate mapping via a validation or constraints.
 
     Parameters
