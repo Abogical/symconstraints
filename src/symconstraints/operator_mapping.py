@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from typing import TypeVar
 
 AnyValueMap = Mapping[str, TypeVar("V")]
+"""Any generic map that has a string key, such as dict, defaultdict, Counter, etc."""
 
 
 class ValidationError(Exception):
