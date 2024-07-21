@@ -2,7 +2,6 @@
 
 from sympy.logic.boolalg import Boolean
 from symconstraints import Validation, Constraints
-from dataclasses import dataclass
 
 from collections.abc import Mapping
 from typing import TypeVar
@@ -10,7 +9,6 @@ from typing import TypeVar
 AnyValueMap = Mapping[str, TypeVar("V")]
 
 
-@dataclass(frozen=True)
 class ValidationError(Exception):
     """Validation error.
 
@@ -26,11 +24,15 @@ class ValidationError(Exception):
     values: AnyValueMap
     unsatisfied_booleans: list[Boolean]
 
-    def __str__(self):
-        return f"Mapping {self.values} is invalid due to not satisfying [{', '.join(str(op) for op in self.unsatisfied_booleans)}]"
+    def __init__(self, values: AnyValueMap, unsatisfied_booleans: list[Boolean]):
+        super().__init__(
+            f"Mapping {values} is invalid due to not satisfying [{', '.join(str(op) for op in unsatisfied_booleans)}]"
+        )
+
+        self.values = values
+        self.unsatisfied_booleans = unsatisfied_booleans
 
 
-@dataclass(frozen=True)
 class ConstraintsValidationError(Exception):
     """Constraints validation error.
 
@@ -42,10 +44,15 @@ class ConstraintsValidationError(Exception):
 
     validation_errors: list[ValidationError]
 
-    def __str__(self):
-        return "Mapping is invalid due to:" + "".join(
-            f"\n- {validation_error}" for validation_error in self.validation_errors
+    def __init__(self, validation_errors: list[ValidationError]):
+        super().__init__(
+            "Mapping is invalid due to:"
+            + "".join(
+                f"\n- {validation_error}" for validation_error in validation_errors
+            )
         )
+
+        self.validation_errors = validation_errors
 
 
 def validate_mapping(constraints: Constraints | Validation, mapping: AnyValueMap):
