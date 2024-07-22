@@ -4,9 +4,9 @@ from sympy.logic.boolalg import Boolean
 from symconstraints import Validation, Constraints
 
 from collections.abc import Mapping
-from typing import TypeVar
+from typing import Any
 
-StringMap = Mapping[str, TypeVar("V")]
+StringMap = Mapping[str, Any]
 """Any generic map that has a string key, such as dict, defaultdict, Counter, etc."""
 
 
