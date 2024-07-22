@@ -1,7 +1,7 @@
 """Basic implementations of operations to the standard python mapping (dict, defaultdict, etc.)."""
 
 from sympy.logic.boolalg import Boolean
-from symconstraints import Validation, Constraints
+from symconstraints import Validation, Constraints, Imputation
 
 from collections.abc import Mapping
 from typing import Any
@@ -119,5 +119,58 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
 
         if len(errors) > 0:
             raise ConstraintsValidationError(errors)
+    else:
+        raise ValueError(f"Invalid constraints given: {constraints}")
+
+
+def impute_mapping(
+    constraints: Imputation | Constraints, mapping: StringMap
+) -> dict[str, Any]:
+    """Impute mapping via a validation or constraints object.
+
+    Parameters
+    ----------
+    constraints : Imputation | Constraints
+        Constraints or Imputation object to use for imputation.
+    mapping : StringMap
+        Input to impute.
+
+    Returns
+    -------
+    dict[str, V]
+        The imputed mapping as a dictionary.
+
+    Raises
+    ------
+    ValueError
+        Raised when an invalid constraints object is given.
+
+
+    Example
+    ------
+    >>> from sympy import Eq
+    >>> from symconstraints import symbols, Constraints
+    >>> from symconstraints.operator_mapping import impute_mapping
+    >>> a, b, c, d = symbols("a b c d")
+    >>> constraints = Constraints([Eq(a, 2 * b + c), c < b, Eq(d, a * c)])
+    >>> impute_mapping(constraints, {"b": 10, "c": 3})
+    {'a': 23, 'b': 10, 'c': 3, 'd': 69}
+    """
+    if isinstance(constraints, Imputation):
+        if mapping.get(str(constraints.target_key)) is None and all(
+            mapping.get(str(key)) is not None for key in constraints.keys
+        ):
+            return {
+                **mapping,
+                str(constraints.target_key): constraints.operation.subs(
+                    [(key, mapping[str(key)]) for key in constraints.keys]
+                ),
+            }
+        return dict(mapping)
+    elif isinstance(constraints, Constraints):
+        result = {**mapping}
+        for imputation in constraints.imputations:
+            result = impute_mapping(imputation, result)
+        return result
     else:
         raise ValueError(f"Invalid constraints given: {constraints}")
