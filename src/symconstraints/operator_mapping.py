@@ -146,8 +146,8 @@ def impute_mapping(
         Raised when an invalid constraints object is given.
 
 
-    Example
-    ------
+    Examples
+    --------
     >>> from sympy import Eq
     >>> from symconstraints import symbols, Constraints
     >>> from symconstraints.operator_mapping import impute_mapping
