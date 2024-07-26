@@ -2,8 +2,11 @@
 site_name: Symbolic Constraints
 site_url: https://abogical.github.io/symconstraints/
 repo_url: https://github.com/abogical/symconstraints/
+repo_name: abogical/symconstraints
 theme:
   name: material
+  icon:
+    repo: fontawesome/brands/github
   palette:
   # Palette toggle for automatic mode
   - media: "(prefers-color-scheme)"
