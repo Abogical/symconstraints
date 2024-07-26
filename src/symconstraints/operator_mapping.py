@@ -68,8 +68,6 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
 
     Raises
     ------
-    ValueError
-        Raised when an invalid constraints object is given.
     ValidationError
         Raised when the mapping data given is invalid under constraints of type `Validation`
     ConstraintsValidationError
@@ -139,12 +137,6 @@ def impute_mapping(
     -------
     dict[str, V]
         The imputed mapping as a dictionary.
-
-    Raises
-    ------
-    ValueError
-        Raised when an invalid constraints object is given.
-
 
     Examples
     --------
