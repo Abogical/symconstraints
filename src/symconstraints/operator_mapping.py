@@ -135,7 +135,7 @@ def impute_mapping(
 
     Returns
     -------
-    dict[str, V]
+    dict[str, Any]
         The imputed mapping as a dictionary.
 
     Examples
