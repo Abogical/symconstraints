@@ -1,6 +1,7 @@
 ---
 site_name: Symbolic Constraints
 site_url: https://abogical.github.io/symconstraints/
+repo_url: https://github.com/abogical/symconstraints/
 theme:
   name: material
   palette:
