@@ -32,6 +32,8 @@ plugins:
     handlers:
       python:
         paths: [src]
+        import:
+        - https://pandas.pydata.org/docs/objects.inv
         options:
           docstring_style: numpy
           members_order: source

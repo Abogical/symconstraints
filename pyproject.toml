@@ -26,6 +26,11 @@ dependencies = [
   "sympy>=1.12,<2"
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pandas"
+]
+
 [project.urls]
 Documentation = "https://github.com/Abogical/symconstraints#readme"
 Issues = "https://github.com/Abogical/symconstraints/issues"
