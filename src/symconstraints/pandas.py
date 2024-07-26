@@ -26,7 +26,7 @@ def symbols(
     df : pandas.DataFrame
         Dataframe to infer symbol assumptions from.
     symbol_list : str | list[str]
-        List of columns, can be represented as a space sperated string.
+        List of columns, can be represented as a space separated string.
     **kwargs: dict, optional
         Extra arguments to be passed to `sympy.Symbol`
 
