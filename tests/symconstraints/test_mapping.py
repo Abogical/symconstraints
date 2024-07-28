@@ -1,13 +1,13 @@
 import pytest
 from sympy import Eq
 from symconstraints import Validation, symbols, Constraints, Imputation
-from symconstraints.operator_mapping import (
+from symconstraints.mapping import (
     validate_mapping,
     ValidationError,
     ConstraintsValidationError,
     impute_mapping,
 )
-from symconstraints import operator_mapping
+from symconstraints import mapping
 import re
 from ast import literal_eval
 import unittest
@@ -124,6 +124,6 @@ class OutputChecker(doctest.OutputChecker):
 def test_docs():
     assert (
         unittest.TextTestRunner()
-        .run(doctest.DocTestSuite(operator_mapping, checker=OutputChecker()))
+        .run(doctest.DocTestSuite(mapping, checker=OutputChecker()))
         .wasSuccessful()
     )

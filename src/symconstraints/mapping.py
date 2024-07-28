@@ -76,7 +76,7 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
     Examples
     --------
     >>> from symconstraints import Constraints, symbols
-    >>> from symconstraints.operator_mapping import validate_mapping
+    >>> from symconstraints.mapping import validate_mapping
     >>> a, b, c = symbols('a b c')
     >>> constraints = Constraints([a < b, b < c])
     >>> validate_mapping(constraints, {'a': 1, 'b': 2})
@@ -142,7 +142,7 @@ def impute_mapping(
     --------
     >>> from sympy import Eq
     >>> from symconstraints import symbols, Constraints
-    >>> from symconstraints.operator_mapping import impute_mapping
+    >>> from symconstraints.mapping import impute_mapping
     >>> a, b, c, d = symbols("a b c d")
     >>> constraints = Constraints([Eq(a, 2 * b + c), c < b, Eq(d, a * c)])
     >>> impute_mapping(constraints, {"b": 10, "c": 3})
