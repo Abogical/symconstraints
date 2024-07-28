@@ -1,3 +1,3 @@
-# Mapping operator
+# Mapping
 
 ::: symconstraints.mapping
