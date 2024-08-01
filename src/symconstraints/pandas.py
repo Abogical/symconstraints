@@ -228,7 +228,7 @@ def set_invalid_all(
     df : pandas.DataFrame
         Dataframe to edit
     fill : Any, optional
-        The set value to replace inalid values.
+        The set value to replace invalid values.
 
     Returns
     -------
