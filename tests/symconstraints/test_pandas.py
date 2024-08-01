@@ -90,6 +90,70 @@ def test_check():
     assert check_comparision.empty, check_comparision
 
 
+def test_set_invalid_none_all():
+    df = pd.DataFrame(
+        {
+            "height": [5, 6, 8, 9],
+            "width": [3, 5, 90, None],
+            "area": [14, 30, None, None],
+        },
+        dtype=float,
+    )
+
+    none_result = sympd.set_invalid_all(pd.DataFrame(), df)
+    none_result_comparision = none_result.compare(df)
+    assert none_result_comparision.empty, none_result_comparision
+
+    symbols = sympd.symbols(df, ["height", "width", "area"])
+    assert isinstance(symbols, list)
+    height, width, area = symbols
+
+    validation = Validation(frozenset([height, width]), frozenset([height > width]))
+
+    check_result = sympd.check(validation, df)
+    none_result = sympd.set_invalid_all(check_result, df)
+    none_result_comparision = none_result.compare(
+        pd.DataFrame(
+            {
+                "height": [5, 6, None, 9],
+                "width": [3, 5, None, None],
+                "area": [14, 30, None, None],
+            },
+            dtype="float",
+        )
+    )
+    assert none_result_comparision.empty, none_result_comparision
+
+    constraints = Constraints([height > width, Eq(area, width * height)])
+    check_result = sympd.check(constraints, df)
+
+    none_result = sympd.set_invalid_all(check_result, df)
+    none_result_comparision = none_result.compare(
+        pd.DataFrame(
+            {
+                "height": [None, 6, None, 9],
+                "width": [None, 5, None, None],
+                "area": [None, 30, None, None],
+            },
+            dtype="float",
+        )
+    )
+    assert none_result_comparision.empty, none_result_comparision
+
+    none_result = sympd.set_invalid_all(check_result, df, -1)
+    none_result_comparision = none_result.compare(
+        pd.DataFrame(
+            {
+                "height": [-1, 6, -1, 9],
+                "width": [-1, 5, -1, None],
+                "area": [-1, 30, None, None],
+            },
+            dtype="float",
+        )
+    )
+    assert none_result_comparision.empty, none_result_comparision
+
+
 class OutputChecker(doctest.OutputChecker):
     def check_output(self, want, got, optionflags):
         # Don't care about exact order of output as it is not deterministic

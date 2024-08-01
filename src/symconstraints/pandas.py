@@ -12,10 +12,7 @@ from pandas.api.types import (
 from functools import cache
 
 from symconstraints import Constraints, Validation
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sympy.logic.boolalg import Boolean
+from sympy.logic.boolalg import Boolean
 
 
 def symbols(
@@ -212,3 +209,82 @@ def check(
         )
 
     raise ValueError(f"Invalid constraints given: {constraints}")
+
+
+def set_invalid_all(
+    check_result: pandas.DataFrame, df: pandas.DataFrame, fill=math.nan
+) -> pandas.DataFrame:
+    """Replace all possible invalid values in the dataframe to a set value.
+
+    This replaces values in the dataframe that could possibly be invalid under the given constraints. This might help
+    get rid of outlier data within the dataframe.
+
+    The input dataframe is copied and is not edited in-place.
+
+    Parameters
+    ----------
+    check_result : pandas.DataFrame
+        Check result returned by `check_result`
+    df : pandas.DataFrame
+        Dataframe to edit
+    fill : Any, optional
+        The set value to replace inalid values.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Dataframe with replaced values.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from symconstraints import Constraints
+    >>> from symconstraints.pandas import symbols, check, set_invalid_all
+    >>> from sympy import Eq
+    >>> df = pd.DataFrame(
+    ...    {
+    ...         "height": [5, 6, 8, 9],
+    ...         "width": [3, 5, 90, None],
+    ...         "area": [14, 30, None, 18],
+    ...     },
+    ...     dtype=float,
+    ... )
+    >>> height, width, area = symbols(df, ["height", "width", "area"])
+    >>> constraints = Constraints([height > width, Eq(area, width * height)])
+    >>> check_result = check(constraints, df)
+    >>> set_invalid_all(check_result, df)
+       height  width  area
+    0     NaN    NaN   NaN
+    1     6.0    5.0  30.0
+    2     NaN    NaN   NaN
+    3     9.0    NaN  18.0
+    """
+    result = df.copy()
+    if check_result.empty:
+        return result
+    if check_result.columns.nlevels == 1:
+        column_item = check_result.columns.item()
+        if not isinstance(column_item, Boolean):
+            raise ValueError(
+                f"Invalid check result given. It has a column {column_item} of type: {type(column_item)}"
+            )
+        result.loc[
+            ~check_result.fillna(1.0).all(axis="columns"),
+            [str(symbol) for symbol in column_item.free_symbols],
+        ] = fill
+
+        return result
+
+    keysets = check_result.columns.get_level_values(0)
+
+    invalid_keysets = [keys for keys in keysets if not isinstance(keys, frozenset)]
+    if len(invalid_keysets) > 0:
+        raise ValueError(f"Found invalid columns in check result: {invalid_keysets}")
+
+    for keys in keysets:
+        result.loc[
+            ~check_result[keys].fillna(1.0).all(axis="columns"),
+            [str(key) for key in keys],
+        ] = fill
+
+    return result
