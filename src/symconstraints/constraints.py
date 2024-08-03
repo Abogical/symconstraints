@@ -194,9 +194,14 @@ class Constraints:
                 symbol_set = solveset(
                     constraint, symbol, domain=_get_symbol_domain(symbol)
                 )
-                symbol_to_sets[symbol].add(symbol_set)
-
-                self._add_possible_imputation_from_set(symbol_set, symbol)
+                if isinstance(symbol_set, Intersection):
+                    for subset in symbol_set.args:
+                        symbol_to_sets[symbol].add(subset)
+                        if isinstance(subset, sympy.Set):
+                            self._add_possible_imputation_from_set(subset, symbol)
+                else:
+                    symbol_to_sets[symbol].add(symbol_set)
+                    self._add_possible_imputation_from_set(symbol_set, symbol)
 
         for symbol, symbol_sets in symbol_to_sets.items():
             for set1, set2 in combinations(symbol_sets, 2):
