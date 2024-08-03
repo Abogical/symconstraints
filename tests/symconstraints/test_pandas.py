@@ -1,5 +1,5 @@
 from symconstraints import pandas as sympd
-from symconstraints import Constraints, Validation
+from symconstraints import Constraints, Validation, Imputation
 from sympy import Eq
 import pandas as pd
 import unittest
@@ -152,6 +152,52 @@ def test_set_invalid_none_all():
         )
     )
     assert none_result_comparision.empty, none_result_comparision
+
+
+def test_impute():
+    df = pd.DataFrame(
+        {
+            "height": [5, 6, 8, 9],
+            "width": [3, None, 90, None],
+            "area": [14, 30, None, None],
+        },
+        dtype=float,
+    )
+
+    symbols = sympd.symbols(df, ["height", "width", "area"])
+    assert isinstance(symbols, list)
+    height, width, area = symbols
+
+    imputation = Imputation(frozenset([height, width]), area, height * width)
+
+    imputation_result = sympd.impute(imputation, df)
+    imputation_comparision = imputation_result.compare(
+        pd.DataFrame(
+            {
+                "height": [5, 6, 8, 9],
+                "width": [3, None, 90, None],
+                "area": [14, 30, 8 * 90, None],
+            },
+            dtype=float,
+        )
+    )
+
+    assert imputation_comparision.empty, imputation_comparision
+
+    constraints = Constraints([height > width, Eq(area, width * height)])
+    imputation_result = sympd.impute(constraints, df)
+    imputation_comparision = imputation_result.compare(
+        pd.DataFrame(
+            {
+                "height": [5, 6, 8, 9],
+                "width": [3, 30 / 6, 90, None],
+                "area": [14, 30, 8 * 90, None],
+            },
+            dtype=float,
+        )
+    )
+
+    assert imputation_comparision.empty, imputation_comparision
 
 
 class OutputChecker(doctest.OutputChecker):

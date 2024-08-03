@@ -11,7 +11,7 @@ from pandas.api.types import (
 )
 from functools import cache
 
-from symconstraints import Constraints, Validation
+from symconstraints import Constraints, Validation, Imputation
 from sympy.logic.boolalg import Boolean
 
 
@@ -288,3 +288,95 @@ def set_invalid_all(
         ] = fill
 
     return result
+
+
+def impute(
+    constraints: Constraints | Imputation, df: pandas.DataFrame
+) -> pandas.DataFrame:
+    """Impute the dataframe under the given constraints.
+
+    This returns a copy of the dataframe with all NA values replaced with values inferred from
+    imputation operations given in the constraints. This assumes that all the values are valid,
+    so it is recommended that the dataframe be checked and that all of its invalid values are
+    removed via `check` and `set_invalid_all`.
+
+    The input dataframe is not edited in-place.
+
+    Parameters
+    ----------
+    constraints : Constraints | Imputation
+        `Constraints` or `Imputation` to use for imputation.
+    df : pandas.DataFrame
+        Dataframe to impute.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Imputed dataframe.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from symconstraints import Constraints
+    >>> from symconstraints.pandas import symbols, check, set_invalid_all, impute
+    >>> from sympy import Eq
+    >>> df = pd.DataFrame(
+    ...    {
+    ...         "height": [5, 6, 8, 9],
+    ...         "width": [3, 5, 7, None],
+    ...         "area": [14, 30, None, 18],
+    ...     },
+    ...     dtype=float,
+    ... )
+    >>> height, width, area = symbols(df, ["height", "width", "area"])
+    >>> constraints = Constraints([height > width, Eq(area, width * height)])
+    >>> check_result = check(constraints, df)
+    >>> df = set_invalid_all(check_result, df)
+    >>> df
+       height  width  area
+    0     NaN    NaN   NaN
+    1     6.0    5.0  30.0
+    2     8.0    7.0   NaN
+    3     9.0    NaN  18.0
+    >>> imputed_df = impute(constraints, df)
+    >>> imputed_df
+       height  width  area
+    0     NaN    NaN   NaN
+    1     6.0    5.0  30.0
+    2     8.0    7.0  56.0
+    3     9.0    2.0  18.0
+    """
+    if isinstance(constraints, Imputation):
+        result = df.copy()
+
+        columns = tuple(constraints.keys)
+        columns_str = [str(column) for column in columns]
+
+        result.loc[
+            result[columns_str].notna().all(axis="columns")
+            & result[str(constraints.target_key)].isna(),
+            str(constraints.target_key),
+        ] = _lambdify(columns, constraints.operation)(
+            *(result[column_str] for column_str in columns_str)
+        )
+
+        return result
+
+    if isinstance(constraints, Constraints):
+        result = df.copy()
+
+        for imputation in constraints.imputations:
+            columns = tuple(imputation.keys)
+            columns_str = [str(column) for column in columns]
+
+            result.loc[
+                result[columns_str].notna().all(axis="columns")
+                & result[str(imputation.target_key)].isna(),
+                str(imputation.target_key),
+            ] = _lambdify(columns, imputation.operation)(
+                *(result[column_str] for column_str in columns_str)
+            )
+
+        return result
+
+    raise ValueError(f"Invalid constraints given: {constraints}")
