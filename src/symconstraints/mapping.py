@@ -56,7 +56,7 @@ class ConstraintsValidationError(Exception):
         self.validation_errors = validation_errors
 
 
-def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
+def validate(constraints: Constraints | Validation, mapping: StringMap):
     """Validate mapping via a validation or constraints.
 
     Parameters
@@ -76,13 +76,13 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
     Examples
     --------
     >>> from symconstraints import Constraints, symbols
-    >>> from symconstraints.mapping import validate_mapping
+    >>> from symconstraints.mapping import validate
     >>> a, b, c = symbols('a b c')
     >>> constraints = Constraints([a < b, b < c])
-    >>> validate_mapping(constraints, {'a': 1, 'b': 2})
+    >>> validate(constraints, {'a': 1, 'b': 2})
     >>> # Nothing happens, data is valid
     >>> try:
-    ...   validate_mapping(constraints, {'a': 4, 'c': 1})
+    ...   validate(constraints, {'a': 4, 'c': 1})
     ... except ConstraintsValidationError as e:
     ...   print(e)
     Mapping is invalid due to:
@@ -111,7 +111,7 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
         errors: list[ValidationError] = []
         for validation in constraints.validations:
             try:
-                validate_mapping(validation, mapping)
+                validate(validation, mapping)
             except ValidationError as e:
                 errors.append(e)
 
@@ -121,9 +121,7 @@ def validate_mapping(constraints: Constraints | Validation, mapping: StringMap):
         raise ValueError(f"Invalid constraints given: {constraints}")
 
 
-def impute_mapping(
-    constraints: Imputation | Constraints, mapping: StringMap
-) -> dict[str, Any]:
+def impute(constraints: Imputation | Constraints, mapping: StringMap) -> dict[str, Any]:
     """Impute mapping via a validation or constraints object.
 
     Parameters
@@ -142,10 +140,10 @@ def impute_mapping(
     --------
     >>> from sympy import Eq
     >>> from symconstraints import symbols, Constraints
-    >>> from symconstraints.mapping import impute_mapping
+    >>> from symconstraints.mapping import impute
     >>> a, b, c, d = symbols("a b c d")
     >>> constraints = Constraints([Eq(a, 2 * b + c), c < b, Eq(d, a * c)])
-    >>> impute_mapping(constraints, {"b": 10, "c": 3})
+    >>> impute(constraints, {"b": 10, "c": 3})
     {'a': 23, 'b': 10, 'c': 3, 'd': 69}
     """
     if isinstance(constraints, Imputation):
@@ -162,7 +160,7 @@ def impute_mapping(
     elif isinstance(constraints, Constraints):
         result = {**mapping}
         for imputation in constraints.imputations:
-            result = impute_mapping(imputation, result)
+            result = impute(imputation, result)
         return result
     else:
         raise ValueError(f"Invalid constraints given: {constraints}")

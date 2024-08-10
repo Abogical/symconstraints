@@ -2,10 +2,10 @@ import pytest
 from sympy import Eq
 from symconstraints import Validation, symbols, Constraints, Imputation
 from symconstraints.mapping import (
-    validate_mapping,
+    validate,
     ValidationError,
     ConstraintsValidationError,
-    impute_mapping,
+    impute,
 )
 from symconstraints import mapping
 import re
@@ -19,12 +19,12 @@ def test_validate_dict():
     validation_op = a < b
     validation = Validation(frozenset([a, b]), frozenset([validation_op]))
 
-    validate_mapping(validation, {"a": 5, "b": 8})
+    validate(validation, {"a": 5, "b": 8})
 
     invalid_input = {"a": 10, "b": 1}
 
     with pytest.raises(ValidationError) as invalid_result:
-        validate_mapping(validation, invalid_input)
+        validate(validation, invalid_input)
 
     assert len(invalid_result.value.unsatisfied_booleans) == 1
     assert invalid_result.value.unsatisfied_booleans[0] == validation_op
@@ -47,12 +47,12 @@ def test_validate_constraint():
 
     valid_input = {"a": 1, "b": 2, "c": 3}
 
-    validate_mapping(constraints, valid_input)
+    validate(constraints, valid_input)
 
     invalid_input = {"a": 1, "c": 0}
 
     with pytest.raises(ConstraintsValidationError) as invalid_result:
-        validate_mapping(constraints, invalid_input)
+        validate(constraints, invalid_input)
 
     unsatisfied_validations = [
         validation_error for validation_error in invalid_result.value.validation_errors
@@ -71,13 +71,13 @@ def test_imputation():
     imputation = Imputation(frozenset([b, c]), a, 2 * b + c)
 
     filled_mapping = {"a": 5, "b": 10, "c": 3}
-    assert impute_mapping(imputation, filled_mapping) == filled_mapping
+    assert impute(imputation, filled_mapping) == filled_mapping
 
     unfilled_mapping = {"b": 10, "c": 3}
-    assert impute_mapping(imputation, unfilled_mapping) == {"a": 23, "b": 10, "c": 3}
+    assert impute(imputation, unfilled_mapping) == {"a": 23, "b": 10, "c": 3}
 
     cant_be_filled_mapping = {"c": 3}
-    assert impute_mapping(imputation, cant_be_filled_mapping) == cant_be_filled_mapping
+    assert impute(imputation, cant_be_filled_mapping) == cant_be_filled_mapping
 
 
 def test_imputate_constraints():
@@ -85,10 +85,10 @@ def test_imputate_constraints():
     constraints = Constraints([Eq(a, 2 * b + c), c < b, Eq(d, a * c)])
 
     filled_mapping = {"a": 5, "b": 10, "c": 3, "d": 7}
-    assert impute_mapping(constraints, filled_mapping) == filled_mapping
+    assert impute(constraints, filled_mapping) == filled_mapping
 
     unfilled_mapping = {"b": 10, "c": 3}
-    assert impute_mapping(constraints, unfilled_mapping) == {
+    assert impute(constraints, unfilled_mapping) == {
         "a": 23,
         "b": 10,
         "c": 3,
@@ -96,17 +96,17 @@ def test_imputate_constraints():
     }
 
     cant_be_filled_mapping = {"c": 3}
-    assert impute_mapping(constraints, cant_be_filled_mapping) == cant_be_filled_mapping
+    assert impute(constraints, cant_be_filled_mapping) == cant_be_filled_mapping
 
 
 def test_wrong_validation():
     with pytest.raises(ValueError, match="Invalid constraints given: 33"):
-        validate_mapping(33, {"a": 1, "b": 7})  # type: ignore
+        validate(33, {"a": 1, "b": 7})  # type: ignore
 
 
 def test_wrong_imputation():
     with pytest.raises(ValueError, match="Invalid constraints given: 33"):
-        impute_mapping(33, {"a": 1, "b": 7})  # type: ignore
+        impute(33, {"a": 1, "b": 7})  # type: ignore
 
 
 dict_re = re.compile(r"(\{[^}]*\})")
