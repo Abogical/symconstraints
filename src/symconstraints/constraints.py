@@ -28,6 +28,8 @@ from sympy import (
     Expr,
     Intersection,
     Union,
+    Q,
+    ask,
 )
 
 if TYPE_CHECKING:
@@ -79,12 +81,12 @@ class _DummyRelation:
             self.strict = False
             return
         elif isinstance(dummy_set, Interval):
-            if isinstance(dummy_set.end, Expr) and dummy_set.end.is_constant():
+            if ask(Q.finite(dummy_set.start)):
                 self.rel = ">"
                 self.expr = dummy_set.start
                 self.strict = bool(dummy_set.left_open)
                 return
-            elif isinstance(dummy_set.start, Expr) and dummy_set.start.is_constant():
+            elif ask(Q.finite(dummy_set.end)):
                 self.rel = "<"
                 self.expr = dummy_set.end
                 self.strict = bool(dummy_set.right_open)

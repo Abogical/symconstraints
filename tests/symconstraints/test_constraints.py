@@ -1,13 +1,19 @@
 import random
 from collections import defaultdict
 
-from sympy import Eq, Le, Lt, S, solveset, sqrt
+from sympy import Eq, Le, Lt, S, solveset, sqrt, Or, Union
 from sympy.logic.boolalg import Boolean
 
 from symconstraints import Constraints, symbols, constraints
 from symconstraints.operation import Validation, Imputation
 import doctest
 import unittest
+
+
+def extended_solveset(expr: Boolean, *args, **kwargs):
+    if isinstance(expr, Or):
+        return Union(*(solveset(arg, *args, **kwargs) for arg in expr.args))
+    return solveset(expr, *args, **kwargs)
 
 
 def equal_bools(bool1: Boolean, bool2: Boolean, domain=S.Reals):
@@ -20,7 +26,8 @@ def equal_bools(bool1: Boolean, bool2: Boolean, domain=S.Reals):
         return bool1 == bool2
 
     pivot_symb = random.choice(list(symb1))
-    return solveset(bool1, pivot_symb, domain=domain) == solveset(
+
+    return extended_solveset(bool1, pivot_symb, domain=domain) == extended_solveset(
         bool2, pivot_symb, domain=domain
     )
 
@@ -141,6 +148,21 @@ def test_inferred_square_equality_validations():
             | Eq(a / 2 - d / 2, -sqrt(-(a**2) + c)),
             Eq(2 * b + d, sqrt(-(b**2) + c)) | Eq(2 * b + d, -sqrt(-(b**2) + c)),
         ],
+    )
+
+
+def test_square_inequality_validations():
+    a, b = symbols("a b", real=True)
+
+    constraints = Constraints([a**2 > 5, Eq(a + b, 8)])
+
+    check_validations(
+        constraints.validations,
+        [a**2 > 5, Eq(a + b, 8), (8 - b) ** 2 > 5],
+    )
+
+    assert frozenset(constraints.imputations) == frozenset(
+        [Imputation(frozenset([b]), a, 8 - b), Imputation(frozenset([a]), b, 8 - a)]
     )
 
 
