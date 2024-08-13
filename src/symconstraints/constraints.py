@@ -28,9 +28,15 @@ from sympy import (
     Expr,
     Intersection,
     Union,
+    ConditionSet,
+    roots,
+    reduce_inequalities,
     Q,
     ask,
+    Pow,
+    Poly,
 )
+from sympy.polys.polyerrors import UnsolvableFactorError
 
 if TYPE_CHECKING:
     from typing import Iterable, Literal
@@ -62,39 +68,27 @@ def _get_symbol_domain(symbol):
 
 
 class _DummyRelation:
-    rel: Literal["<", ">", "="]
+    rel: Literal["<", ">", "=", "!"]
     expr: Basic
     strict: bool
 
     def __init__(self, relation: Basic, dummy: Dummy):
-        dummy_set = solveset(relation, dummy, domain=_get_symbol_domain(dummy))
-
-        # simplify set if possible
-        while (
-            isinstance(dummy_set, (Intersection, Union)) and len(dummy_set.args[1]) == 1
-        ):
-            dummy_set = dummy_set.args[1]
-
-        if isinstance(dummy_set, FiniteSet) and len(dummy_set) == 1:
+        relation = reduce_inequalities(relation, dummy)
+        self.strict = isinstance(relation, (Lt, Gt))
+        if isinstance(relation, Eq):
             self.rel = "="
-            self.expr = dummy_set.args[0]
-            self.strict = False
-            return
-        elif isinstance(dummy_set, Interval):
-            if ask(Q.finite(dummy_set.start)):
+            self.expr = relation.rhs if relation.lhs == dummy else relation.lhs
+        elif isinstance(relation, Ge | Gt | Le | Lt):
+            if relation.gts == dummy:
                 self.rel = ">"
-                self.expr = dummy_set.start
-                self.strict = bool(dummy_set.left_open)
-                return
-            elif ask(Q.finite(dummy_set.end)):
+                self.expr = relation.lts
+            else:
                 self.rel = "<"
-                self.expr = dummy_set.end
-                self.strict = bool(dummy_set.right_open)
-                return
+                self.expr = relation.gts
 
-        raise ValueError(
-            f"Could not analyze relation {relation} as it generated the set {dummy_set}"
-        )
+
+def _is_even_root(expr: _DummyRelation):
+    return isinstance(expr.expr, Pow) and ask(Q.even(1 / expr.expr.args[1]))
 
 
 def _and_dummy_to_constraints(and_relation: And, dummy: Dummy) -> set[Boolean]:
@@ -107,21 +101,28 @@ def _and_dummy_to_constraints(and_relation: And, dummy: Dummy) -> set[Boolean]:
             warn(str(e))
 
     for relation1, relation2 in combinations(useful_relations, 2):
+        strict = relation1.strict or relation2.strict
         match (relation1.rel, relation2.rel):
             case ("=", "="):
                 constraints.add(Eq(relation1.expr, relation2.expr))
             case (">" | "=", "<" | "="):
-                constraints.add(
-                    (Lt if relation1.strict or relation2.strict else Le)(
-                        relation1.expr, relation2.expr
-                    )
-                )
+                if ask(Eq(relation1.expr, -relation2.expr)) and (
+                    _is_even_root(relation1) or _is_even_root(relation2)
+                ):
+                    # This is a workaround to a bug where SymPy doesn't recognize the square roots are always nonnegative
+                    # in the real domain
+                    continue
+
+                constraints.add((Lt if strict else Le)(relation1.expr, relation2.expr))
             case ("<" | "=", ">" | "="):
-                constraints.add(
-                    (Gt if relation1.strict or relation2.strict else Ge)(
-                        relation1.expr, relation2.expr
-                    )
-                )
+                if ask(Eq(relation1.expr, -relation2.expr)) and (
+                    _is_even_root(relation1) or _is_even_root(relation2)
+                ):
+                    # This is a workaround to a bug where SymPy doesn't recognize the square roots are always nonnegative
+                    # in the real domain
+                    continue
+
+                constraints.add((Gt if strict else Ge)(relation1.expr, relation2.expr))
 
     return constraints
 
@@ -201,6 +202,96 @@ class Constraints:
                         symbol_to_sets[symbol].add(subset)
                         if isinstance(subset, sympy.Set):
                             self._add_possible_imputation_from_set(subset, symbol)
+                elif isinstance(symbol_set, ConditionSet):
+                    # solveset couldn't return a simple set. Attempt to solve manually.
+                    # Is it a polynomial inequality?
+                    if (
+                        isinstance(symbol_set.condition, Le | Ge | Gt | Lt)
+                        and isinstance(symbol_set.condition.lts, Expr)
+                        and isinstance(symbol_set.condition.gts, Expr)
+                    ):
+                        expr = (
+                            symbol_set.condition.lts - symbol_set.condition.gts
+                            if (symbol in symbol_set.condition.lts.free_symbols)
+                            ^ (symbol in symbol_set.condition.gts.free_symbols)
+                            else None
+                        )
+
+                        if expr is not None and expr.is_polynomial(symbol):
+                            # It is a polynomial inequality, solve it as such.
+                            expr_poly = Poly(expr, symbol)
+                            strict = isinstance(symbol_set.condition, Gt | Lt)
+                            GreaterThan = (
+                                (lambda x: Interval.Lopen(x, oo))
+                                if strict
+                                else (lambda x: Interval(x, oo))
+                            )
+                            LessThan = (
+                                (lambda x: Interval.Ropen(-oo, x))
+                                if strict
+                                else (lambda x: Interval(-oo, x))
+                            )
+                            try:
+                                expr_roots = roots(
+                                    expr_poly, strict=True, multiple=True
+                                )
+                                union_args = []
+                                # The inequality is in the form of F > 0 if polynomial is negative, i.e., F is negative iff an even
+                                # number of factors are negative. F < 0 if polynomial is postive, i.e. F is positive iff an odd
+                                # number of factors are odd.
+                                for number_of_negatives in range(
+                                    0 if expr_poly.LC() < 0 else 1,
+                                    len(expr_roots) + 1,
+                                    2,
+                                ):
+                                    for negative_indexes in combinations(
+                                        range(len(expr_roots)), number_of_negatives
+                                    ):
+                                        intervals = {}
+                                        for index, root in enumerate(expr_roots):
+                                            for key in intervals.keys():
+                                                quotient = key / root
+                                                if (
+                                                    len(quotient.free_symbols) == 0
+                                                    and quotient.is_real
+                                                ):
+                                                    intervals[key] = Intersection(
+                                                        intervals[key],
+                                                        LessThan(quotient)
+                                                        if index in negative_indexes
+                                                        else GreaterThan(quotient),
+                                                    )
+                                                    break
+                                            else:
+                                                intervals[root] = (
+                                                    LessThan(1)
+                                                    if index in negative_indexes
+                                                    else GreaterThan(1)
+                                                )
+                                        if all(
+                                            isinstance(interval, Interval)
+                                            for interval in intervals.values()
+                                        ):
+                                            union_args.append(
+                                                Intersection(
+                                                    *(
+                                                        Interval(
+                                                            -oo
+                                                            if interval.start == -oo
+                                                            else root * interval.start,
+                                                            oo
+                                                            if interval.end == oo
+                                                            else root * interval.end,
+                                                            left_open=interval.left_open,
+                                                            right_open=interval.right_open,
+                                                        )
+                                                        for root, interval in intervals.items()
+                                                    )
+                                                )
+                                            )
+                                symbol_to_sets[symbol].add(Union(*union_args))
+                            except UnsolvableFactorError:
+                                pass
                 else:
                     symbol_to_sets[symbol].add(symbol_set)
                     self._add_possible_imputation_from_set(symbol_set, symbol)
@@ -215,8 +306,8 @@ class Constraints:
                     and_operations: list[Boolean] = []
                     for arg in dummy_relation.args:
                         if isinstance(arg, And):
-                            and_operations += list(
-                                _and_dummy_to_constraints(arg, dummy)
+                            and_operations.append(
+                                And(*_and_dummy_to_constraints(arg, dummy))
                             )
                         else:
                             and_operations = []
