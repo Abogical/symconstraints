@@ -12,22 +12,39 @@ Validate and impute your dataset with mathematical expressions.
 
 Symbolic Constraints, or `symconstraints` for short, allows you to express your dataset rules
 using mathematical equations and expressions. It makes use of the powerful [SymPy](https://www.sympy.org) Computer Algebra System to analyze
-mathematical expressions and infer all possible validation and imputation methods to your datasets. Helping you clean
-your dataset with little code.
-
-## Table of Contents
-
-- [Installation](#installation)
-- [Examples](#examples)
-- [License](#license)
+mathematical expressions and infer all possible validation and imputation methods to your datasets.
 
 ## Installation
 
 This package is still a work in progress and not ready for release yet. A package will be published as soon as it is ready.
 
-## Examples
+## Features
 
-### Validate and impute a Pandas Dataframe
+### 🪄 Automatic inference
+
+`symconstraints` uses SymPy to rearrange your formulas and find new ways to validate and impute your data.
+
+### Example
+
+```python
+>>> from symconstraints import
+>>> constraints = Constraints([a < 3*b, c > b**2 + 1])
+>>> for validation in constraints.validations
+...     print(validation)
+Validation: (b, a) => [a < 3*b] inferred by (a < 3*b)
+Validation: (b, c) => [c > b**2 + 1] inferred by (c > b**2 + 1)
+Validation: (a, c) => [a/3 < sqrt(c - 1)] inferred by (c > b**2 + 1, a < 3*b)
+```
+
+It automatically infers that $\frac{a}{3} < \sqrt{c-1}$.
+
+### 🧩 Integrations
+
+Integrates with popular data science tools such as [Pandas](https://pandas.pydata.org/). Saving you time to help you clean your datasets with little code.
+
+_scikit-learn and Pandera integrations are currently under development._
+
+### Example
 
 ```python
 >>> import pandas as pd
