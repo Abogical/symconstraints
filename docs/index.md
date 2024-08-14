@@ -17,7 +17,8 @@ mathematical expressions and infer all possible validation and imputation method
 !!! example
 
     ```python
-    >>> from symconstraints import
+    >>> from symconstraints import Constraints, symbols
+    >>> a, b, c = symbols('a b c')
     >>> constraints = Constraints([a < 3*b, c > b**2 + 1])
     >>> for validation in constraints.validations
     ...     print(validation)

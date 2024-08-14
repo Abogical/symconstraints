@@ -27,7 +27,8 @@ This package is still a work in progress and not ready for release yet. A packag
 ### Example
 
 ```python
->>> from symconstraints import
+>>> from symconstraints import Constraints, symbols
+>>> a, b, c = symbols('a b c')
 >>> constraints = Constraints([a < 3*b, c > b**2 + 1])
 >>> for validation in constraints.validations
 ...     print(validation)
