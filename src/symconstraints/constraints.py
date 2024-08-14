@@ -6,6 +6,8 @@ from collections import defaultdict
 from itertools import combinations
 from typing import TYPE_CHECKING
 from warnings import warn
+from dataclasses import dataclass
+from functools import reduce
 
 import sympy
 from sympy import (
@@ -133,6 +135,18 @@ def _get_basic_symbols(basic: Basic):
     )
 
 
+@dataclass(frozen=True)
+class _InferredSet:
+    inferred_set: sympy.Set
+    inferred_by: Boolean
+
+
+@dataclass(frozen=True)
+class _InferredConstraint:
+    constraint: Boolean
+    inferred_by: frozenset[Boolean]
+
+
 def symbols(symbols_str: str | Iterable[str], *, real=True, **kwargs):
     """Define SymPy symbols.
 
@@ -165,14 +179,14 @@ class Constraints:
     >>> for validation in constraints.validations:
     ...     print(validation)
     ...
-    Validation: (b, a) => [Eq(a, 2*b)]
-    Validation: (c, b) => [c < b + 3]
-    Validation: (c, a) => [a/2 > c - 3]
+    Validation: (b, a) => [Eq(a, 2*b)] inferred by (Eq(a, 2*b))
+    Validation: (c, b) => [c < b + 3] inferred by (c < b + 3)
+    Validation: (c, a) => [a/2 > c - 3] inferred by (c < b + 3, Eq(a, 2*b))
     >>> for imputation in constraints.imputations:
     ...     print(imputation)
     ...
-    Imputation: (b) => a = 2*b
-    Imputation: (a) => b = a/2
+    Imputation: (b) => a = 2*b inferred by (Eq(a, 2*b))
+    Imputation: (a) => b = a/2 inferred by (Eq(a, 2*b))
     """
 
     _validations: list[Validation]
@@ -186,22 +200,29 @@ class Constraints:
         constraints : Iterable[Boolean]
             List of SymPy Boolean expressions
         """
-        symbol_to_sets: defaultdict[Symbol, set] = defaultdict(set)
-        symbols_to_constraints: defaultdict[frozenset[Symbol], set] = defaultdict(set)
+        symbol_to_sets: defaultdict[Symbol, set[_InferredSet]] = defaultdict(set)
+        symbols_to_constraints: defaultdict[
+            frozenset[Symbol], set[_InferredConstraint]
+        ] = defaultdict(set)
         self._imputations = []
 
         for constraint in constraints:
             symbols = _get_basic_symbols(constraint)
-            symbols_to_constraints[symbols].add(constraint)
+            inferred_by = frozenset([constraint])
+            symbols_to_constraints[symbols].add(
+                _InferredConstraint(constraint, inferred_by)
+            )
             for symbol in symbols:
                 symbol_set = solveset(
                     constraint, symbol, domain=_get_symbol_domain(symbol)
                 )
                 if isinstance(symbol_set, Intersection):
                     for subset in symbol_set.args:
-                        symbol_to_sets[symbol].add(subset)
                         if isinstance(subset, sympy.Set):
-                            self._add_possible_imputation_from_set(subset, symbol)
+                            symbol_to_sets[symbol].add(_InferredSet(subset, constraint))
+                            self._add_possible_imputation_from_set(
+                                subset, symbol, inferred_by
+                            )
                 elif isinstance(symbol_set, ConditionSet):
                     # solveset couldn't return a simple set. Attempt to solve manually.
                     # Is it a polynomial inequality?
@@ -289,15 +310,28 @@ class Constraints:
                                                     )
                                                 )
                                             )
-                                symbol_to_sets[symbol].add(Union(*union_args))
+                                symbol_to_sets[symbol].add(
+                                    _InferredSet(Union(*union_args), constraint)
+                                )
                             except UnsolvableFactorError:
                                 pass
                 else:
-                    symbol_to_sets[symbol].add(symbol_set)
-                    self._add_possible_imputation_from_set(symbol_set, symbol)
+                    symbol_to_sets[symbol].add(_InferredSet(symbol_set, constraint))
+                    self._add_possible_imputation_from_set(
+                        symbol_set, symbol, inferred_by
+                    )
 
         for symbol, symbol_sets in symbol_to_sets.items():
-            for set1, set2 in combinations(symbol_sets, 2):
+            for inferred_set1, inferred_set2 in combinations(symbol_sets, 2):
+                set1, inferred_by1 = (
+                    inferred_set1.inferred_set,
+                    inferred_set1.inferred_by,
+                )
+                set2, inferred_by2 = (
+                    inferred_set2.inferred_set,
+                    inferred_set2.inferred_by,
+                )
+                inferred_by = frozenset([inferred_by1, inferred_by2])
                 dummy = Dummy(**symbol.assumptions0)
                 dummy_relation = simplify_logic(
                     set1.intersect(set2).as_relational(dummy), form="dnf"
@@ -315,12 +349,14 @@ class Constraints:
                     if len(and_operations) > 0:
                         constraint = Or(*and_operations)
                         symbols_to_constraints[_get_basic_symbols(constraint)].add(
-                            constraint
+                            _InferredConstraint(constraint, inferred_by)
                         )
                 elif isinstance(dummy_relation, And):
                     for constraint in _and_dummy_to_constraints(dummy_relation, dummy):
                         constraint_symbols = _get_basic_symbols(constraint)
-                        symbols_to_constraints[constraint_symbols].add(constraint)
+                        symbols_to_constraints[constraint_symbols].add(
+                            _InferredConstraint(constraint, inferred_by)
+                        )
                         for constraint_symbol in constraint_symbols:
                             constraint_symbol_set = solveset(
                                 constraint,
@@ -328,16 +364,25 @@ class Constraints:
                                 domain=_get_symbol_domain(constraint_symbol),
                             )
                             self._add_possible_imputation_from_set(
-                                constraint_symbol_set, constraint_symbol
+                                constraint_symbol_set, constraint_symbol, inferred_by
                             )
 
         self._validations = [
-            Validation(frozenset(symbols), frozenset(constraints))
-            for symbols, constraints in symbols_to_constraints.items()
+            Validation(
+                frozenset(symbols),
+                frozenset(
+                    inferred_constraint.constraint
+                    for inferred_constraint in inferred_constraints
+                ),
+                inferred_by=reduce(
+                    lambda a, b: a | b.inferred_by, inferred_constraints, frozenset()
+                ),
+            )
+            for symbols, inferred_constraints in symbols_to_constraints.items()
         ]
 
     def _add_possible_imputation_from_set(
-        self, set_expr: sympy.Set, target_expr: Symbol
+        self, set_expr: sympy.Set, target_expr: Symbol, inferred_by: frozenset[Boolean]
     ):
         if isinstance(set_expr, FiniteSet) and len(set_expr) == 1:
             expr = set_expr.args[0]
@@ -347,6 +392,7 @@ class Constraints:
                         _get_basic_symbols(expr),
                         target_expr,
                         expr,
+                        inferred_by=inferred_by,
                     )
                 )
 

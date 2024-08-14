@@ -116,20 +116,54 @@ def test_inferred_inequality_strictness_validations():
 def test_inferred_equal_imputations():
     a, b, c, d, e = symbols("a b c d e")
 
-    constraints = Constraints([Eq(a, b + c), Eq(c, d - e)])
+    constraint1 = Eq(a, b + c)
+    constraint2 = Eq(c, d - e)
+    constraints = Constraints([constraint1, constraint2])
 
     assert frozenset(constraints.imputations) == frozenset(
         [
-            Imputation(frozenset([b, c]), a, b + c),
-            Imputation(frozenset([a, c]), b, a - c),
-            Imputation(frozenset([a, b]), c, a - b),
-            Imputation(frozenset([d, e]), c, d - e),
-            Imputation(frozenset([c, e]), d, c + e),
-            Imputation(frozenset([c, d]), e, d - c),
-            Imputation(frozenset([b, d, e]), a, b + d - e),
-            Imputation(frozenset([a, d, e]), b, a - d + e),
-            Imputation(frozenset([a, b, e]), d, a - b + e),
-            Imputation(frozenset([a, b, d]), e, d - a + b),
+            Imputation(
+                frozenset([b, c]), a, b + c, inferred_by=frozenset([constraint1])
+            ),
+            Imputation(
+                frozenset([a, c]), b, a - c, inferred_by=frozenset([constraint1])
+            ),
+            Imputation(
+                frozenset([a, b]), c, a - b, inferred_by=frozenset([constraint1])
+            ),
+            Imputation(
+                frozenset([d, e]), c, d - e, inferred_by=frozenset([constraint2])
+            ),
+            Imputation(
+                frozenset([c, e]), d, c + e, inferred_by=frozenset([constraint2])
+            ),
+            Imputation(
+                frozenset([c, d]), e, d - c, inferred_by=frozenset([constraint2])
+            ),
+            Imputation(
+                frozenset([b, d, e]),
+                a,
+                b + d - e,
+                inferred_by=frozenset([constraint1, constraint2]),
+            ),
+            Imputation(
+                frozenset([a, d, e]),
+                b,
+                a - d + e,
+                inferred_by=frozenset([constraint1, constraint2]),
+            ),
+            Imputation(
+                frozenset([a, b, e]),
+                d,
+                a - b + e,
+                inferred_by=frozenset([constraint1, constraint2]),
+            ),
+            Imputation(
+                frozenset([a, b, d]),
+                e,
+                d - a + b,
+                inferred_by=frozenset([constraint1, constraint2]),
+            ),
         ]
     )
 
@@ -154,15 +188,20 @@ def test_inferred_square_equality_validations():
 def test_square_inequality_validations():
     a, b, c, d = symbols("a b c d", real=True)
 
-    constraints = Constraints([a**2 > 5, Eq(a + b, 8)])
+    constraint1 = a**2 > 5
+    constraint2 = Eq(a + b, 8)
+    constraints = Constraints([constraint1, constraint2])
 
     check_validations(
         constraints.validations,
-        [a**2 > 5, Eq(a + b, 8), (8 - b) ** 2 > 5],
+        [constraint1, constraint2, (8 - b) ** 2 > 5],
     )
 
     assert frozenset(constraints.imputations) == frozenset(
-        [Imputation(frozenset([b]), a, 8 - b), Imputation(frozenset([a]), b, 8 - a)]
+        [
+            Imputation(frozenset([b]), a, 8 - b, inferred_by=frozenset([constraint2])),
+            Imputation(frozenset([a]), b, 8 - a, inferred_by=frozenset([constraint2])),
+        ]
     )
 
     constraints = Constraints([Eq(a, 2 * b + d), c < (b**2 + a)])
@@ -177,13 +216,15 @@ def test_square_inequality_validations():
         ],
     )
 
-    constraints = Constraints([Eq(a, 2 * b + d), c > (b**2 + a)])
+    constraint1 = Eq(a, 2 * b + d)
+    constraint2 = c > (b**2 + a)
+    constraints = Constraints([constraint1, constraint2])
 
     check_validations(
         constraints.validations,
         [
-            Eq(a, 2 * b + d),
-            c > (b**2 + a),
+            constraint1,
+            constraint2,
             2 * b + d < c - b**2,
             (a - d) / 2 > -sqrt(c - a),
             (a - d) / 2 < sqrt(c - a),
@@ -192,9 +233,15 @@ def test_square_inequality_validations():
 
     assert frozenset(constraints.imputations) == frozenset(
         [
-            Imputation(frozenset([b, d]), a, 2 * b + d),
-            Imputation(frozenset([a, d]), b, (a - d) / 2),
-            Imputation(frozenset([a, b]), d, a - 2 * b),
+            Imputation(
+                frozenset([b, d]), a, 2 * b + d, inferred_by=frozenset([constraint1])
+            ),
+            Imputation(
+                frozenset([a, d]), b, (a - d) / 2, inferred_by=frozenset([constraint1])
+            ),
+            Imputation(
+                frozenset([a, b]), d, a - 2 * b, inferred_by=frozenset([constraint1])
+            ),
         ]
     )
 
