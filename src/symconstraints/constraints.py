@@ -88,6 +88,9 @@ class _DummyRelation:
                 self.rel = "<"
                 self.expr = relation.gts
 
+        if self.rel is None:
+            raise ValueError(f"Could not analyze relation {relation}")
+
 
 def _is_even_root(expr: _DummyRelation):
     return isinstance(expr.expr, Pow) and ask(Q.even(1 / expr.expr.args[1]))
