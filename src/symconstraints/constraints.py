@@ -382,6 +382,7 @@ class Constraints:
                 ),
             )
             for symbols, inferred_constraints in symbols_to_constraints.items()
+            if len(symbols) > 0
         ]
 
     def _add_possible_imputation_from_set(

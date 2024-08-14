@@ -245,6 +245,13 @@ def test_square_inequality_validations():
         ]
     )
 
+    constraints = Constraints([a < b, c < b**2 + 1])
+
+    check_validations(
+        constraints.validations,
+        [a < b, c < b**2 + 1],
+    )
+
 
 class OutputChecker(doctest.OutputChecker):
     def check_output(self, want, got, optionflags):
