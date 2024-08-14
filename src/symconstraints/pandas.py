@@ -16,7 +16,7 @@ from sympy.logic.boolalg import Boolean
 
 
 def symbols(
-    df: pandas.DataFrame, columns: str | list[str], **kwargs
+    df: pandas.DataFrame, symbol_list: str | list[str], **kwargs
 ) -> Symbol | list[Symbol]:
     """Return SymPy symbols with assumptions inferred from the dataframe dtypes.
 
@@ -65,7 +65,7 @@ def symbols(
     (None, True)
     """
     result = []
-    symbols = columns if isinstance(columns, list) else columns.split()
+    symbols = symbol_list if isinstance(symbol_list, list) else symbol_list.split()
     for symbol in symbols:
         symbol_dtype = df.dtypes.get(symbol)
         if symbol_dtype is None:
