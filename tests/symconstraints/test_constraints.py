@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 
-from sympy import Eq, Le, Lt, S, solveset, sqrt, Or, Union
+from sympy import Eq, Le, Lt, S, solveset, sqrt, Or, Union, And
 from sympy.logic.boolalg import Boolean
 
 from symconstraints import Constraints, symbols, constraints
@@ -251,6 +251,26 @@ def test_square_inequality_validations():
         constraints.validations,
         [a < b, c < b**2 + 1],
     )
+
+
+def test_and_constraint():
+    a, b, c = symbols("a b c")
+
+    constraints1 = Constraints([a < 2 * b, c > b**2 + 1])
+    constraints2 = Constraints([And(a < 2 * b, c > b**2 + 1)])
+
+    check_validations(
+        constraints1.validations, [a < 2 * b, c > b**2 + 1, a / 2 < sqrt(c - 1)]
+    )
+    check_validations(
+        constraints2.validations, [a < 2 * b, c > b**2 + 1, a / 2 < sqrt(c - 1)]
+    )
+    assert all(
+        frozenset([And(a < 2 * b, c > b**2 + 1)]) == v.inferred_by
+        for v in constraints2.validations
+    )
+
+    assert frozenset(constraints1.imputations) == frozenset(constraints2.imputations)
 
 
 class OutputChecker(doctest.OutputChecker):

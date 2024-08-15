@@ -39,11 +39,10 @@ from sympy import (
     Poly,
 )
 from sympy.polys.polyerrors import UnsolvableFactorError
+from sympy.logic.boolalg import Boolean
 
 if TYPE_CHECKING:
     from typing import Iterable, Literal
-
-    from sympy.logic.boolalg import Boolean
 
 from symconstraints.operation import Imputation, Validation
 
@@ -183,7 +182,7 @@ class Constraints:
     ...     print(validation)
     ...
     Validation: (b, a) => [Eq(a, 2*b)] inferred by (Eq(a, 2*b))
-    Validation: (c, b) => [c < b + 3] inferred by (c < b + 3)
+    Validation: (c, b) => [b - c > -3] inferred by (c < b + 3)
     Validation: (c, a) => [a/2 > c - 3] inferred by (c < b + 3, Eq(a, 2*b))
     >>> for imputation in constraints.imputations:
     ...     print(imputation)
@@ -203,128 +202,22 @@ class Constraints:
         constraints : Iterable[Boolean]
             List of SymPy Boolean expressions
         """
-        symbol_to_sets: defaultdict[Symbol, set[_InferredSet]] = defaultdict(set)
-        symbols_to_constraints: defaultdict[
+        self._symbol_to_sets: defaultdict[Symbol, set[_InferredSet]] = defaultdict(set)
+        self._symbols_to_constraints: defaultdict[
             frozenset[Symbol], set[_InferredConstraint]
         ] = defaultdict(set)
         self._imputations = []
 
         for constraint in constraints:
-            symbols = _get_basic_symbols(constraint)
-            inferred_by = frozenset([constraint])
-            symbols_to_constraints[symbols].add(
-                _InferredConstraint(constraint, inferred_by)
-            )
-            for symbol in symbols:
-                symbol_set = solveset(
-                    constraint, symbol, domain=_get_symbol_domain(symbol)
-                )
-                if isinstance(symbol_set, Intersection):
-                    for subset in symbol_set.args:
-                        if isinstance(subset, sympy.Set):
-                            symbol_to_sets[symbol].add(_InferredSet(subset, constraint))
-                            self._add_possible_imputation_from_set(
-                                subset, symbol, inferred_by
-                            )
-                elif isinstance(symbol_set, ConditionSet):
-                    # solveset couldn't return a simple set. Attempt to solve manually.
-                    # Is it a polynomial inequality?
-                    if (
-                        isinstance(symbol_set.condition, Le | Ge | Gt | Lt)
-                        and isinstance(symbol_set.condition.lts, Expr)
-                        and isinstance(symbol_set.condition.gts, Expr)
-                    ):
-                        expr = (
-                            symbol_set.condition.lts - symbol_set.condition.gts
-                            if (symbol in symbol_set.condition.lts.free_symbols)
-                            ^ (symbol in symbol_set.condition.gts.free_symbols)
-                            else None
-                        )
+            simplified_constraint = simplify_logic(constraint, form="cnf", force=True)
+            if isinstance(simplified_constraint, And):
+                for arg in simplified_constraint.args:
+                    if isinstance(arg, Boolean):
+                        self._add_constraint(arg, constraint)
+            else:
+                self._add_constraint(simplified_constraint, constraint)
 
-                        if expr is not None and expr.is_polynomial(symbol):
-                            # It is a polynomial inequality, solve it as such.
-                            expr_poly = Poly(expr, symbol)
-                            strict = isinstance(symbol_set.condition, Gt | Lt)
-                            GreaterThan = (
-                                (lambda x: Interval.Lopen(x, oo))
-                                if strict
-                                else (lambda x: Interval(x, oo))
-                            )
-                            LessThan = (
-                                (lambda x: Interval.Ropen(-oo, x))
-                                if strict
-                                else (lambda x: Interval(-oo, x))
-                            )
-                            try:
-                                expr_roots = roots(
-                                    expr_poly, strict=True, multiple=True
-                                )
-                                union_args = []
-                                # The inequality is in the form of F > 0 if polynomial is negative, i.e., F is negative iff an even
-                                # number of factors are negative. F < 0 if polynomial is postive, i.e. F is positive iff an odd
-                                # number of factors are odd.
-                                for number_of_negatives in range(
-                                    0 if expr_poly.LC() < 0 else 1,
-                                    len(expr_roots) + 1,
-                                    2,
-                                ):
-                                    for negative_indexes in combinations(
-                                        range(len(expr_roots)), number_of_negatives
-                                    ):
-                                        intervals = {}
-                                        for index, root in enumerate(expr_roots):
-                                            for key in intervals.keys():
-                                                quotient = key / root
-                                                if (
-                                                    len(quotient.free_symbols) == 0
-                                                    and quotient.is_real
-                                                ):
-                                                    intervals[key] = Intersection(
-                                                        intervals[key],
-                                                        LessThan(quotient)
-                                                        if index in negative_indexes
-                                                        else GreaterThan(quotient),
-                                                    )
-                                                    break
-                                            else:
-                                                intervals[root] = (
-                                                    LessThan(1)
-                                                    if index in negative_indexes
-                                                    else GreaterThan(1)
-                                                )
-                                        if all(
-                                            isinstance(interval, Interval)
-                                            for interval in intervals.values()
-                                        ):
-                                            union_args.append(
-                                                Intersection(
-                                                    *(
-                                                        Interval(
-                                                            -oo
-                                                            if interval.start == -oo
-                                                            else root * interval.start,
-                                                            oo
-                                                            if interval.end == oo
-                                                            else root * interval.end,
-                                                            left_open=interval.left_open,
-                                                            right_open=interval.right_open,
-                                                        )
-                                                        for root, interval in intervals.items()
-                                                    )
-                                                )
-                                            )
-                                symbol_to_sets[symbol].add(
-                                    _InferredSet(Union(*union_args), constraint)
-                                )
-                            except UnsolvableFactorError:
-                                pass
-                else:
-                    symbol_to_sets[symbol].add(_InferredSet(symbol_set, constraint))
-                    self._add_possible_imputation_from_set(
-                        symbol_set, symbol, inferred_by
-                    )
-
-        for symbol, symbol_sets in symbol_to_sets.items():
+        for symbol, symbol_sets in self._symbol_to_sets.items():
             for inferred_set1, inferred_set2 in combinations(symbol_sets, 2):
                 set1, inferred_by1 = (
                     inferred_set1.inferred_set,
@@ -350,19 +243,21 @@ class Constraints:
                             and_operations = []
                             break
                     if len(and_operations) > 0:
-                        constraint = Or(*and_operations)
-                        symbols_to_constraints[_get_basic_symbols(constraint)].add(
-                            _InferredConstraint(constraint, inferred_by)
-                        )
+                        simplified_constraint = Or(*and_operations)
+                        self._symbols_to_constraints[
+                            _get_basic_symbols(simplified_constraint)
+                        ].add(_InferredConstraint(simplified_constraint, inferred_by))
                 elif isinstance(dummy_relation, And):
-                    for constraint in _and_dummy_to_constraints(dummy_relation, dummy):
-                        constraint_symbols = _get_basic_symbols(constraint)
-                        symbols_to_constraints[constraint_symbols].add(
-                            _InferredConstraint(constraint, inferred_by)
+                    for simplified_constraint in _and_dummy_to_constraints(
+                        dummy_relation, dummy
+                    ):
+                        constraint_symbols = _get_basic_symbols(simplified_constraint)
+                        self._symbols_to_constraints[constraint_symbols].add(
+                            _InferredConstraint(simplified_constraint, inferred_by)
                         )
                         for constraint_symbol in constraint_symbols:
                             constraint_symbol_set = solveset(
-                                constraint,
+                                simplified_constraint,
                                 constraint_symbol,
                                 domain=_get_symbol_domain(constraint_symbol),
                             )
@@ -381,9 +276,122 @@ class Constraints:
                     lambda a, b: a | b.inferred_by, inferred_constraints, frozenset()
                 ),
             )
-            for symbols, inferred_constraints in symbols_to_constraints.items()
+            for symbols, inferred_constraints in self._symbols_to_constraints.items()
             if len(symbols) > 0
         ]
+
+    def _add_constraint(self, constraint: Boolean, inferred_by: Boolean):
+        inferred_by_set = frozenset([inferred_by])
+        symbols = _get_basic_symbols(constraint)
+        self._symbols_to_constraints[symbols].add(
+            _InferredConstraint(constraint, inferred_by_set)
+        )
+        for symbol in symbols:
+            symbol_set = solveset(constraint, symbol, domain=_get_symbol_domain(symbol))
+            if isinstance(symbol_set, Intersection):
+                for subset in symbol_set.args:
+                    if isinstance(subset, sympy.Set):
+                        self._symbol_to_sets[symbol].add(
+                            _InferredSet(subset, inferred_by)
+                        )
+                        self._add_possible_imputation_from_set(
+                            subset, symbol, inferred_by_set
+                        )
+            elif isinstance(symbol_set, ConditionSet):
+                # solveset couldn't return a simple set. Attempt to solve manually.
+                # Is it a polynomial inequality?
+                if (
+                    isinstance(symbol_set.condition, Le | Ge | Gt | Lt)
+                    and isinstance(symbol_set.condition.lts, Expr)
+                    and isinstance(symbol_set.condition.gts, Expr)
+                ):
+                    expr = (
+                        symbol_set.condition.lts - symbol_set.condition.gts
+                        if (symbol in symbol_set.condition.lts.free_symbols)
+                        ^ (symbol in symbol_set.condition.gts.free_symbols)
+                        else None
+                    )
+
+                    if expr is not None and expr.is_polynomial(symbol):
+                        # It is a polynomial inequality, solve it as such.
+                        expr_poly = Poly(expr, symbol)
+                        strict = isinstance(symbol_set.condition, Gt | Lt)
+                        GreaterThan = (
+                            (lambda x: Interval.Lopen(x, oo))
+                            if strict
+                            else (lambda x: Interval(x, oo))
+                        )
+                        LessThan = (
+                            (lambda x: Interval.Ropen(-oo, x))
+                            if strict
+                            else (lambda x: Interval(-oo, x))
+                        )
+                        try:
+                            expr_roots = roots(expr_poly, strict=True, multiple=True)
+                            union_args = []
+                            # The inequality is in the form of F > 0 if polynomial is negative, i.e., F is negative iff an even
+                            # number of factors are negative. F < 0 if polynomial is postive, i.e. F is positive iff an odd
+                            # number of factors are odd.
+                            for number_of_negatives in range(
+                                0 if expr_poly.LC() < 0 else 1,
+                                len(expr_roots) + 1,
+                                2,
+                            ):
+                                for negative_indexes in combinations(
+                                    range(len(expr_roots)), number_of_negatives
+                                ):
+                                    intervals = {}
+                                    for index, root in enumerate(expr_roots):
+                                        for key in intervals.keys():
+                                            quotient = key / root
+                                            if (
+                                                len(quotient.free_symbols) == 0
+                                                and quotient.is_real
+                                            ):
+                                                intervals[key] = Intersection(
+                                                    intervals[key],
+                                                    LessThan(quotient)
+                                                    if index in negative_indexes
+                                                    else GreaterThan(quotient),
+                                                )
+                                                break
+                                        else:
+                                            intervals[root] = (
+                                                LessThan(1)
+                                                if index in negative_indexes
+                                                else GreaterThan(1)
+                                            )
+                                    if all(
+                                        isinstance(interval, Interval)
+                                        for interval in intervals.values()
+                                    ):
+                                        union_args.append(
+                                            Intersection(
+                                                *(
+                                                    Interval(
+                                                        -oo
+                                                        if interval.start == -oo
+                                                        else root * interval.start,
+                                                        oo
+                                                        if interval.end == oo
+                                                        else root * interval.end,
+                                                        left_open=interval.left_open,
+                                                        right_open=interval.right_open,
+                                                    )
+                                                    for root, interval in intervals.items()
+                                                )
+                                            )
+                                        )
+                            self._symbol_to_sets[symbol].add(
+                                _InferredSet(Union(*union_args), inferred_by)
+                            )
+                        except UnsolvableFactorError:
+                            pass
+            else:
+                self._symbol_to_sets[symbol].add(_InferredSet(symbol_set, inferred_by))
+                self._add_possible_imputation_from_set(
+                    symbol_set, symbol, inferred_by_set
+                )
 
     def _add_possible_imputation_from_set(
         self, set_expr: sympy.Set, target_expr: Symbol, inferred_by: frozenset[Boolean]
