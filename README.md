@@ -26,6 +26,8 @@ This package is still a work in progress and not ready for release yet. A packag
 
 ### Example
 
+Given the constraints $a < 3b$ and $c > b^2 + 1$:
+
 ```python
 >>> from symconstraints import Constraints, symbols
 >>> a, b, c = symbols('a b c')

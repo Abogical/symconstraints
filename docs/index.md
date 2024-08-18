@@ -16,6 +16,8 @@ mathematical expressions and infer all possible validation and imputation method
 
 !!! example
 
+    Given the constraints $a < 3b$ and $c > b^2 + 1$:
+
     ```python
     >>> from symconstraints import Constraints, symbols
     >>> a, b, c = symbols('a b c')
