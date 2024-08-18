@@ -5,8 +5,8 @@ repo_url: https://github.com/abogical/symconstraints/
 repo_name: abogical/symconstraints
 theme:
   name: material
-  favicon: logo.svg
-  logo: logo.svg
+  favicon: logo.png
+  logo: logo.png
   icon:
     repo: fontawesome/brands/github
   palette:

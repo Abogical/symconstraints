@@ -3,6 +3,13 @@ python_requirement(
 )
 
 pex_binary(
+    name="make_logo",
+    entry_point="cairosvg",
+    dependencies=["//:reqs#cairosvg"],
+    args=["docs/logo.svg", "-o", "docs/logo.png"],
+)
+
+pex_binary(
     name="build",
     dependencies=[":reqs", "//:reqs"],
     script="mkdocs",
