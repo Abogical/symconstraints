@@ -293,10 +293,6 @@ def set_invalid_all(
     return result
 
 
-def _get_symbols_from_sets(sets: pandas.Index) -> set:
-    return reduce(or_, sets, frozenset())
-
-
 @cache
 def _set_cover(subsets_buffer: bytes, shape: tuple[int, int]) -> list[int]:
     if shape[0] == 0 or shape[1] == 0:
@@ -375,7 +371,7 @@ def set_invalid_min(
     4     7.0    NaN    5.0   NaN     NaN
     """
     validation_sets = check_result.columns.get_level_values(0).unique()
-    symbols = _get_symbols_from_sets(validation_sets)
+    symbols = reduce(or_, validation_sets, frozenset())
     symbols_str = [str(s) for s in symbols]
 
     if priority is not None:
@@ -383,8 +379,6 @@ def set_invalid_min(
             (str(value), index) for index, value in enumerate(priority)
         )
         symbols_str.sort(key=lambda symbol: priority_indices.get(symbol, math.inf))
-
-    symbols_str_order = dict((value, index) for index, value in enumerate(symbols_str))
 
     # Finding the minimum number of symbols to replace is equivalent to the set cover problem.
     check_sets = check_result.groupby(level=0, axis="columns").all()
@@ -409,12 +403,9 @@ def set_invalid_min(
             raise ValueError(
                 f"Unexpected value found when fetching invalid sets index: {invalid_sets}"
             )
-        invalid_set_to_symbols = set_to_symbols.loc[
-            invalid_sets,
-            sorted(
-                (str(x) for x in _get_symbols_from_sets(invalid_sets)),
-                key=lambda symbol: symbols_str_order[symbol],
-            ),
+        invalid_set_to_symbols = set_to_symbols.loc[invalid_sets, :]
+        invalid_set_to_symbols = invalid_set_to_symbols[
+            invalid_set_to_symbols.any(axis="columns")
         ]
         invalid_symbols = list(invalid_set_to_symbols.columns)
         invalid_set_to_symbols_numpy = invalid_set_to_symbols.to_numpy()
