@@ -154,6 +154,54 @@ def test_set_invalid_none_all():
     assert none_result_comparision.empty, none_result_comparision
 
 
+def test_set_invalid_min():
+    df = pd.DataFrame(
+        {
+            "height": [5, 6, 8, 9, 7],
+            "width": [3, 5, 90, None, 8],
+            "depth": [None, 2, 10, 5, 5],
+            "area": [14, 30, 10, None, 35],
+            "volume": [None, 60, 100, 30, None],
+        },
+        dtype=float,
+    )
+
+    symbols = sympd.symbols(df, ["height", "width", "area", "volume", "depth"])
+    assert isinstance(symbols, list)
+    height, width, area, volume, depth = symbols
+
+    constraints = Constraints(
+        [
+            Eq(area, height * width),
+            Eq(volume, area * depth),
+            height > width,
+            width > depth,
+        ]
+    )
+
+    check_result = sympd.check(constraints, df)
+
+    validation_result = sympd.set_invalid_min(
+        check_result, df, priority=[volume, area, depth, width, height]
+    )
+
+    assert sympd.check(constraints, validation_result).all().all()  # type: ignore
+
+    validation_result_comparision = validation_result.compare(
+        pd.DataFrame(
+            {
+                "height": [5, 6, None, 9, 7],
+                "width": [3, 5, 90, None, None],
+                "depth": [None, 2, 10, 5, 5],
+                "area": [None, 30, None, None, None],
+                "volume": [None, 60, 100, 30, None],
+            }
+        )
+    )
+
+    assert validation_result_comparision.empty, validation_result_comparision
+
+
 def test_impute():
     df = pd.DataFrame(
         {

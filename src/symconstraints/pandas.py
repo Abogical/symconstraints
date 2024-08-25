@@ -9,10 +9,13 @@ from pandas.api.types import (
     is_float_dtype,
     is_complex_dtype,
 )
-from functools import cache
+from functools import cache, reduce
+from itertools import combinations
 
 from symconstraints import Constraints, Validation, Imputation
 from sympy.logic.boolalg import Boolean
+import numpy as np
+from operator import or_
 
 
 def symbols(
@@ -288,6 +291,155 @@ def set_invalid_all(
         ] = fill
 
     return result
+
+
+def _get_symbols_from_sets(sets: pandas.Index) -> set:
+    return reduce(or_, sets, frozenset())
+
+
+@cache
+def _set_cover(subsets_buffer: bytes, shape: tuple[int, int]) -> list[int]:
+    if shape[0] == 0 or shape[1] == 0:
+        return []
+
+    subsets = np.frombuffer(subsets_buffer, dtype=bool).reshape(shape)
+    for symbol_amount in range(1, subsets.shape[1]):
+        for selection in combinations(range(subsets.shape[1]), symbol_amount):
+            if subsets[:, selection].any(axis=1).all():
+                return list(selection)
+    return list(range(subsets.shape[1]))
+
+
+def set_invalid_min(
+    check_result: pandas.DataFrame,
+    df: pandas.DataFrame,
+    fill=math.nan,
+    priority: list[Symbol] | None = None,
+) -> pandas.DataFrame:
+    """Replace the minimum amount of possible invalid values in the dataframe to a set value.
+
+    Similar to `set_invalid_all`, this replaces values in the dataframe that could possibly be invalid under the given constraints.
+    However it does not replace all the values, instead it tries to replace the minimum amount of values in each row such that
+    it satisfies all the constraints. This might help get rid of outlier data within the dataframe, while also keeping more of the values
+    in the dataset unchanged.
+
+    The input dataframe is copied and is not edited in-place.
+
+    Parameters
+    ----------
+    check_result : pandas.DataFrame
+        Check result returned by `check_result`
+    df : pandas.DataFrame
+        Dataframe to edit
+    fill : Any, optional
+        The set value to replace invalid values.
+    priority : list[Symbol] | None, optional
+        In case of a tie in the decision to set which column, refer to this priority to decide which
+        column to to set first. Priority is ordered from most preferred to be set to least preferred.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Dataframe with replaced values.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from symconstraints import Constraints
+    >>> from symconstraints.pandas import symbols, check, set_invalid_min
+    >>> from sympy import Eq
+    >>> df = pd.DataFrame(
+    ...    {
+    ...        "height": [5, 6, 8, 9, 7],
+    ...        "width": [3, 5, 90, None, 8],
+    ...        "depth": [None, 2, 10, 5, 5],
+    ...        "area": [14, 30, 10, None, 35],
+    ...        "volume": [None, 60, 100, 30, None],
+    ...    },
+    ...    dtype=float,
+    ... )
+    >>> height, width, area, depth, volume = symbols(df, ["height", "width", "area", "depth", "volume"])
+    >>> constraints = Constraints([
+    ...     Eq(area, height * width),
+    ...     Eq(volume, area * depth),
+    ...     height > width,
+    ...     width > depth,
+    ... ])
+    >>> check_result = check(constraints, df)
+    >>> set_invalid_min(check_result, df, priority=[volume, area, depth, width, height])
+       height  width  depth  area  volume
+    0     5.0    3.0    NaN   NaN     NaN
+    1     6.0    5.0    2.0  30.0    60.0
+    2     NaN   90.0   10.0   NaN   100.0
+    3     9.0    NaN    5.0   NaN    30.0
+    4     7.0    NaN    5.0   NaN     NaN
+    """
+    validation_sets = check_result.columns.get_level_values(0).unique()
+    symbols = _get_symbols_from_sets(validation_sets)
+    symbols_str = [str(s) for s in symbols]
+
+    if priority is not None:
+        priority_indices = dict(
+            (str(value), index) for index, value in enumerate(priority)
+        )
+        symbols_str.sort(key=lambda symbol: priority_indices.get(symbol, math.inf))
+
+    symbols_str_order = dict((value, index) for index, value in enumerate(symbols_str))
+
+    # Finding the minimum number of symbols to replace is equivalent to the set cover problem.
+    check_sets = check_result.groupby(level=0, axis="columns").all()
+    check_sets.columns = check_sets.columns.get_level_values(0)
+
+    set_to_symbols = pandas.DataFrame(
+        [
+            dict(
+                (symbol, symbol in frozenset(str(s) for s in subset))
+                for symbol in symbols_str
+            )
+            for subset in validation_sets
+        ],
+        index=validation_sets,
+    )
+
+    set_cover_results = pandas.DataFrame(columns=[*validation_sets, *symbols_str])
+
+    for _, selection in check_sets.drop_duplicates().iterrows():
+        invalid_sets = selection.index[selection == 0.0]
+        if not isinstance(invalid_sets, pandas.Index):
+            raise ValueError(
+                f"Unexpected value found when fetching invalid sets index: {invalid_sets}"
+            )
+        invalid_set_to_symbols = set_to_symbols.loc[
+            invalid_sets,
+            sorted(
+                (str(x) for x in _get_symbols_from_sets(invalid_sets)),
+                key=lambda symbol: symbols_str_order[symbol],
+            ),
+        ]
+        invalid_symbols = list(invalid_set_to_symbols.columns)
+        invalid_set_to_symbols_numpy = invalid_set_to_symbols.to_numpy()
+        symbols_to_remove = set(
+            invalid_symbols[index]
+            for index in _set_cover(
+                invalid_set_to_symbols_numpy.tobytes(),
+                invalid_set_to_symbols_numpy.shape,
+            )
+        )
+        set_cover_results.loc[len(set_cover_results)] = pandas.concat(
+            [
+                selection,
+                pandas.Series(
+                    dict(
+                        (symbol, symbol in symbols_to_remove) for symbol in symbols_str
+                    )
+                ),
+            ]
+        )
+
+    to_set = check_sets.merge(set_cover_results, how="left")[symbols_str]
+    to_set.index = check_sets.index  # I don't know why I have to do this.
+
+    return df.where(~to_set, fill)
 
 
 def impute(

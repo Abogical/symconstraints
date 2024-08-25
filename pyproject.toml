@@ -29,7 +29,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pandas",
-  "cairosvg"
+  "cairosvg",
+  "numpy"
 ]
 
 [project.urls]
