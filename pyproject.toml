@@ -27,10 +27,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
+test = [
   "pandas",
+  "numpy",
+  "pytest",
+  "pytest-cov",
+  "ipdb"
+]
+
+docs=[
   "cairosvg",
-  "numpy"
+  "mkdocs-material",
+  "mkdocstrings[python]"
 ]
 
 [project.urls]

@@ -1,5 +1,3 @@
-python_requirement(name="pytest-reqs", requirements=["pytest", "pytest-cov", "ipdb"])
-
 python_requirements(name="reqs", source="pyproject.toml")
 
 resources(name="pyproject", sources=["pyproject.toml"])

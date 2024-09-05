@@ -1,6 +1,4 @@
-python_requirement(
-    name="reqs", requirements=["mkdocs-material", "mkdocstrings[python]"]
-)
+docs_deps = [f"//:reqs#{dep}" for dep in ["mkdocs-material", "mkdocstrings"]]
 
 pex_binary(
     name="make_logo",
@@ -11,14 +9,14 @@ pex_binary(
 
 pex_binary(
     name="build",
-    dependencies=[":reqs", "//:reqs"],
+    dependencies=docs_deps,
     script="mkdocs",
     args=["build", "-d", "dist/docs"],
 )
 
 pex_binary(
     name="serve",
-    dependencies=[":reqs", "//:reqs"],
+    dependencies=docs_deps,
     script="mkdocs",
     args=["serve"],
 )

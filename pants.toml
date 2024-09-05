@@ -34,7 +34,7 @@ use_coverage = true
 [pytest]
 install_from_resolve = "python-default"
 requirements=[
-    "//:pytest-reqs#pytest",
-    "//:pytest-reqs#pytest-cov",
-    "//:pytest-reqs#ipdb"
+    "//:reqs#pytest",
+    "//:reqs#pytest-cov",
+    "//:reqs#ipdb"
 ]
