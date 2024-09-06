@@ -47,4 +47,3 @@ from symconstraints.operation import Operation, Validation, Imputation
 
 __docformat__ = "numpy"
 __all__ = ["Constraints", "symbols", "Operation", "Validation", "Imputation"]
-__version__ = "0.0.1"
