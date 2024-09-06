@@ -1,8 +1,7 @@
 # Symbolic Constraints
 
-<!-- [![PyPI - Version](https://img.shields.io/pypi/v/symconstraints.svg)](https://pypi.org/project/symconstraints)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/symconstraints.svg)](https://pypi.org/project/symconstraints) -->
-
+[![PyPI - Version](https://img.shields.io/pypi/v/symconstraints.svg)](https://pypi.org/project/symconstraints)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/symconstraints.svg)](https://pypi.org/project/symconstraints)
 [![CI Test Status](https://img.shields.io/github/actions/workflow/status/abogical/symconstraints/tests.yaml?branch=main&label=tests&style=for-the-badge)](https://github.com/Abogical/symconstraints/actions/workflows/tests.yaml?query=branch%3Amain)
 
 Website: https://abogical.github.io/symconstraints/
@@ -16,7 +15,11 @@ mathematical expressions and infer all possible validation and imputation method
 
 ## Installation
 
-This package is still a work in progress and not ready for release yet. A package will be published as soon as it is ready.
+Symbolic constraints can be installed via [`pip`](https://pypi.org/project/pip/):
+
+```console
+pip install symconstraints
+```
 
 ## Features
 

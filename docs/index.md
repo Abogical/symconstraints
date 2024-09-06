@@ -1,5 +1,7 @@
 # Symbolic Constraints
 
+[![PyPI - Version](https://img.shields.io/pypi/v/symconstraints.svg)](https://pypi.org/project/symconstraints)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/symconstraints.svg)](https://pypi.org/project/symconstraints)
 [![CI Test Status](https://img.shields.io/github/actions/workflow/status/abogical/symconstraints/tests.yaml?branch=main&label=tests&style=for-the-badge)](https://github.com/Abogical/symconstraints/actions/workflows/tests.yaml?query=branch%3Amain)
 
 Validate and impute your dataset with mathematical expressions.
@@ -7,6 +9,14 @@ Validate and impute your dataset with mathematical expressions.
 Symbolic Constraints, or `symconstraints` for short, allows you to express your dataset rules
 using mathematical equations and expressions. It makes use of the powerful [SymPy](https://www.sympy.org) Computer Algebra System to analyze
 mathematical expressions and infer all possible validation and imputation methods to your datasets.
+
+## Installation
+
+Symbolic constraints can be installed via [`pip`](https://pypi.org/project/pip/):
+
+```console
+pip install symconstraints
+```
 
 ## Features
 
