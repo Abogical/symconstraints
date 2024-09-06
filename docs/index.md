@@ -1,7 +1,7 @@
 # Symbolic Constraints
 
-[![PyPI - Version](https://img.shields.io/pypi/v/symconstraints.svg)](https://pypi.org/project/symconstraints)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/symconstraints.svg)](https://pypi.org/project/symconstraints)
+[![PyPI - Version](https://img.shields.io/pypi/v/symconstraints.svg?style=for-the-badge)](https://pypi.org/project/symconstraints)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/symconstraints.svg?style=for-the-badge)](https://pypi.org/project/symconstraints)
 [![CI Test Status](https://img.shields.io/github/actions/workflow/status/abogical/symconstraints/tests.yaml?branch=main&label=tests&style=for-the-badge)](https://github.com/Abogical/symconstraints/actions/workflows/tests.yaml?query=branch%3Amain)
 
 Validate and impute your dataset with mathematical expressions.
