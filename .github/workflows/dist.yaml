@@ -1,0 +1,27 @@
+---
+name: Deploy
+
+# build the documentation whenever there are new version tags created.
+on:
+  push:
+    branches:
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  # Package and distribute to PyPI
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Initialize Pants
+      uses: pantsbuild/actions/init-pants@main
+      with:
+        gha-cache-key: v0-py3.12
+        named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock') }}
+    - run: |
+        pants publish //:dist
