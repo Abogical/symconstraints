@@ -6,6 +6,7 @@ file(name="assets", source="README.md")
 vcs_version(
     name="version",
     generate_to="src/symconstraints/__version__.py",
+    version_scheme="no-guess-dev",
     local_scheme="no-local-version",
     template='__version__ = "{version}"',
 )
