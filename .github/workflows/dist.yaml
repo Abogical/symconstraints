@@ -9,9 +9,14 @@ on:
     - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  # Package and distribute to PyPI
   dist:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/<your-pypi-project-name>
+    permissions:
+      id-token: write  # This permission is mandatory for trusted publishing
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
@@ -23,5 +28,8 @@ jobs:
       with:
         gha-cache-key: v0-py3.12
         named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock') }}
-    - run: |
-        pants publish //:dist
+    - name: Build package
+      run: |
+        pants package //:dist
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
