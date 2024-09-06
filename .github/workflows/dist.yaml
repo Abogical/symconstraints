@@ -1,5 +1,5 @@
 ---
-name: Deploy
+name: Distribution
 
 # build the documentation whenever there are new version tags created.
 on:
